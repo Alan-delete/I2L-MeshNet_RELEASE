@@ -12,19 +12,19 @@ import math
 
 class Model_pose(nn.Module):
     def __init__(self, pose_backbone, pose_net):
-        super(Model, self).__init__()
+        super(Model_pose, self).__init__()
         self.pose_backbone = pose_backbone
         self.pose_net = pose_net
         
-        if 'FreiHAND' in cfg.trainset_3d + cfg.trainset_2d + [cfg.testset]:
-            self.human_model = MANO()
-            self.human_model_layer = self.human_model.layer.cuda()
-        else:
-            self.human_model = SMPL()
-            self.human_model_layer = self.human_model.layer['neutral'].cuda()
-        self.root_joint_idx = self.human_model.root_joint_idx
-        self.mesh_face = self.human_model.face
-        self.joint_regressor = self.human_model.joint_regressor
+        #if 'FreiHAND' in cfg.trainset_3d + cfg.trainset_2d + [cfg.testset]:
+        #    self.human_model = MANO()
+        #    self.human_model_layer = self.human_model.layer.cuda()
+        #else:
+        #    self.human_model = SMPL()
+        #    self.human_model_layer = self.human_model.layer['neutral'].cuda()
+        #self.root_joint_idx = self.human_model.root_joint_idx
+        #self.mesh_face = self.human_model.face
+        #self.joint_regressor = self.human_model.joint_regressor
 
         self.coord_loss = CoordLoss()
         
