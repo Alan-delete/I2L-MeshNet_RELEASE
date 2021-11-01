@@ -23,7 +23,9 @@ def parse_args():
     parser.add_argument('--gpu', type=str, dest='gpu_ids')
     parser.add_argument('--test_epoch', type=str, dest='test_epoch')
     args = parser.parse_args()
-
+    use_gpu = torch.cuda.is_available()
+    if not use_gpu:
+        assert 0, print("Lack of gpu")
     # test gpus
     if not args.gpu_ids:
         assert 0, print("Please set proper gpu ids")
