@@ -52,7 +52,7 @@ skeleton = ( (0,1), (1,4), (4,7), (7,10), (0,2), (2,5), (5,8), (8,11), (0,3), (3
 
 # snapshot load
 
-model_path = './snapshot_%d.pth.tar' % int(args.test_epoch)
+model_path = '../weights/snapshot_%d.pth.tar' % int(args.test_epoch)
 assert osp.exists(model_path), 'Cannot find model at ' + model_path
 print('Load checkpoint from {}'.format(model_path))
 model = get_model( joint_num, 'test')
