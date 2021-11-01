@@ -3,12 +3,10 @@ import torch.nn as nn
 from torch.nn import functional as F
 from nets.resnet import ResNetBackbone
 from nets.densenet import DenseNetBackbone
-from nets.module import PoseNet, Pose2Feat, MeshNet, ParamRegressor
+from nets.module import PoseNet
 from nets.loss import CoordLoss, ParamLoss, NormalVectorLoss, EdgeLengthLoss
-from utils.smpl import SMPL
-from utils.mano import MANO
 from config import cfg
-from contextlib import nullcontext
+#from contextlib import nullcontext
 import math
 
 class Model_2Dpose(nn.Module):
@@ -34,10 +32,10 @@ class Model_2Dpose(nn.Module):
     
     def forward(self, inputs, targets, meta_info, mode):
 
-        if cfg.stage == 'lixel':
-            cm = nullcontext()
-        else:
-            cm = torch.no_grad()
+        #if cfg.stage == 'lixel':
+        #    cm = nullcontext()
+        #else:
+        cm = torch.no_grad()
         
         with cm:
             # posenet forward

@@ -41,7 +41,7 @@ def parse_args():
 
 # argument parsing
 args = parse_args()
-cfg.set_args(args.gpu_ids, args.stage)
+cfg.set_args(args.gpu_ids, 'lixel')
 cudnn.benchmark = True
 
 # SMPL joint set

@@ -4,7 +4,6 @@ from torch.nn import functional as F
 from torchvision.models import densenet121, densenet169, densenet201, densenet161
 from torchvision.models import DenseNet
 from config import cfg
-import torchgeometry as tgm
 from nets.layer import make_conv_layers, make_deconv_layers, make_conv1d_layers, make_linear_layers
 
 
