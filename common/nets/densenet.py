@@ -8,8 +8,8 @@ __all__ = ['DenseNet', 'densenet121', 'densenet169', 'densenet201', 'densenet161
 
 model_urls = {
     'densenet121': (densenet121, 32, (6, 12, 24, 16), 64 ),
+    'densenet161': (densenet121, 48, (6, 12, 36, 24), 96 ),
     'densenet169': (densenet121, 32, (6, 12, 24, 16), 64 ),
-    'densenet201': (densenet121, 32, (6, 12, 24, 16), 64 ),
     'densenet161': (densenet121, 32, (6, 12, 24, 16), 64 ),
 }
 

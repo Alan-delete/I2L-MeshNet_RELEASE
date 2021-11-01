@@ -9,14 +9,15 @@ from nets.layer import make_conv_layers, make_deconv_layers, make_conv1d_layers,
 
 backbone_model = {
     'densenet121': (densenet121, 32, (6, 12, 24, 16), 64 ),
-    'densenet169': (densenet169, 32, (6, 12, 24, 16), 64 ),
-    'densenet201': (densenet201, 32, (6, 12, 24, 16), 64 ),
-    'densenet161': (densenet161, 32, (6, 12, 24, 16), 64 ),
+    'densenet161': (densenet161, 48, (6, 12, 36, 24), 96 ),
+    'densenet169': (densenet169, 32, (6, 12, 32, 32), 64 ),
+    'densenet201': (densenet201, 32, (6, 12, 48, 32), 64 ),
+
 }
 
 
 class PoseNet(nn.Module):
-    def __init__(self, joint_num, backbone = 'densenet121'):
+    def __init__(self, joint_num):
         super(PoseNet, self).__init__()
         self.joint_num = joint_num
         self.deconv = make_deconv_layers([2048,256,256,256])
@@ -55,14 +56,3 @@ class PoseNet(nn.Module):
         joint_coord = torch.cat((coord_x, coord_y, coord_z),2)
         return joint_coord
 
-class Pose2Feat(nn.Module):
-    def __init__(self, joint_num):
-        super(Pose2Feat, self).__init__()
-        self.joint_num = joint_num
-        self.conv = make_conv_layers([64+joint_num*cfg.output_hm_shape[0],64])
-
-    def forward(self, img_feat, joint_heatmap_3d):
-        joint_heatmap_3d = joint_heatmap_3d.view(-1,self.joint_num*cfg.output_hm_shape[0],cfg.output_hm_shape[1],cfg.output_hm_shape[2])
-        feat = torch.cat((img_feat, joint_heatmap_3d),1)
-        feat = self.conv(feat)
-        return feat

@@ -12,7 +12,9 @@ class Config:
     testset = 'PW3D' # Human36M, MSCOCO, PW3D, FreiHAND
 
     ## model setting
+    backbone_type = 'resnet50'
     resnet_type = 50 # 50, 101, 152
+    densenet_type = 121 # 169, 201, 161
     
     ## input, output
     input_img_shape = (256, 256) 
