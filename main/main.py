@@ -21,7 +21,6 @@ from utils.transforms import pixel2cam, cam2pixel
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--gpu', type=str, dest='gpu_ids')
-    parser.add_argument('--stage', type=str, dest='stage')
     parser.add_argument('--test_epoch', type=str, dest='test_epoch')
     args = parser.parse_args()
 
@@ -35,9 +34,6 @@ def parse_args():
         gpus[1] = int(gpus[1]) + 1
         args.gpu_ids = ','.join(map(lambda x: str(x), list(range(*gpus))))
     
-    if not args.stage:
-        assert 0, "Please set training stage among [lixel, param]"
-
     assert args.test_epoch, 'Test epoch is required.'
     return args
 
@@ -53,6 +49,7 @@ flip_pairs = ( (1,2), (4,5), (7,8), (10,11), (13,14), (16,17), (18,19), (20,21),
 skeleton = ( (0,1), (1,4), (4,7), (7,10), (0,2), (2,5), (5,8), (8,11), (0,3), (3,6), (6,9), (9,14), (14,17), (17,19), (19, 21), (21,23), (9,13), (13,16), (16,18), (18,20), (20,22), (9,12), (12,24), (24,15), (24,25), (24,26), (25,27), (26,28) )
 
 # snapshot load
+
 model_path = './snapshot_%d.pth.tar' % int(args.test_epoch)
 assert osp.exists(model_path), 'Cannot find model at ' + model_path
 print('Load checkpoint from {}'.format(model_path))
@@ -65,7 +62,7 @@ model.eval()
 
 # prepare input image
 transform = transforms.ToTensor()
-img_path = 'input.jpg'
+img_path = '../demo/input.jpg'
 original_img = cv2.imread(img_path)
 original_img_height, original_img_width = original_img.shape[:2]
 
@@ -83,4 +80,5 @@ targets = {}
 meta_info = {'bb2img_trans':None}
 with torch.no_grad():
     out = model(inputs, targets, meta_info, 'test')
+print(out)
 
