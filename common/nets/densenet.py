@@ -1,44 +1,37 @@
 import torch
 import torch.nn as nn
-from torchvision.models import densenet121, densenet161, densenet201, densenet161
+from torchvision.models import densenet121, densenet161, densenet169, densenet201
 from torchvision.models import DenseNet
 from torch.nn import functional as F
 
-__all__ = ['DenseNet', 'densenet121', 'densenet169', 'densenet201', 'densenet161']
-
 model_urls = {
-    'densenet121': (densenet121, 32, (6, 12, 24, 16), 64 ),
-    'densenet161': (densenet121, 48, (6, 12, 36, 24), 96 ),
-    'densenet169': (densenet121, 32, (6, 12, 24, 16), 64 ),
-    'densenet161': (densenet121, 32, (6, 12, 24, 16), 64 ),
+    'densenet121': 'https://download.pytorch.org/models/densenet121-a639ec97.pth',
+    'densenet169': 'https://download.pytorch.org/models/densenet169-b2777c0a.pth',
+    'densenet201': 'https://download.pytorch.org/models/densenet201-c1103571.pth',
+    'densenet161': 'https://download.pytorch.org/models/densenet161-8d451a50.pth',
 }
-
 class DenseNetBackbone(nn.Module):
 
     def __init__(self, densenet_type):
 	
-        resnet_spec = {18: (BasicBlock, [2, 2, 2, 2], [64, 64, 128, 256, 512], 'resnet18'),
-		       34: (BasicBlock, [3, 4, 6, 3], [64, 64, 128, 256, 512], 'resnet34'),
-		       50: (Bottleneck, [3, 4, 6, 3], [64, 256, 512, 1024, 2048], 'resnet50'),
-		       101: (Bottleneck, [3, 4, 23, 3], [64, 256, 512, 1024, 2048], 'resnet101'),
-		       152: (Bottleneck, [3, 8, 36, 3], [64, 256, 512, 1024, 2048], 'resnet152')}
-        block, layers, channels, name = resnet_spec[resnet_type]
-        
-        
+        super(DenseNetBackbone, self).__init__()
+
+        densenet_spec = {121: (densenet121, 32, (6, 12, 24, 16), 64, 'densenet121'),
+		       161: (densenet161, 48, (6, 12, 36, 24), 96, 'densenet161'),
+		       169: (densenet169,  32, (6, 12, 32, 32), 64, 'densenet169'),
+		       201: (densenet201, 32, (6, 12, 48, 32), 64, 'densenet201'),}
+        densenet, growth_rate, block_config,num_init_features, name = densenet_spec[densenet_type]
+        self.features = densenet(pretrain = True)
         self.name = name
         self.inplanes = 64
-        super(ResNetBackbone, self).__init__()
-        self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3,
+        num_features = num_init_features
+        for i, num_layers in enumerate(block_config):
+            num_features = num_features + num_layers * growth_rate
+            if i != len(block_config) - 1:
+                num_features = num_features // 2
+
+        self.conv1 = nn.Conv2d(num_features,2048, kernel_size=1, stride=1, padding=1,
                                bias=False)
-        self.bn1 = nn.BatchNorm2d(64)
-        self.relu = nn.ReLU(inplace=True)
-        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
-
-        self.layer1 = self._make_layer(block, 64, layers[0])
-        self.layer2 = self._make_layer(block, 128, layers[1], stride=2)
-        self.layer3 = self._make_layer(block, 256, layers[2], stride=2)
-        self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
-
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 # nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
@@ -47,44 +40,22 @@ class DenseNetBackbone(nn.Module):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
 
-    def _make_layer(self, block, planes, blocks, stride=1):
-        downsample = None
-        if stride != 1 or self.inplanes != planes * block.expansion:
-            downsample = nn.Sequential(
-                nn.Conv2d(self.inplanes, planes * block.expansion,
-                          kernel_size=1, stride=stride, bias=False),
-                nn.BatchNorm2d(planes * block.expansion),
-            )
-
-        layers = []
-        layers.append(block(self.inplanes, planes, stride, downsample))
-        self.inplanes = planes * block.expansion
-        for i in range(1, blocks):
-            layers.append(block(self.inplanes, planes))
-
-        return nn.Sequential(*layers)
-
     def forward(self, x, skip_early=False):
-        if not skip_early:
-            x = self.conv1(x)
-            x = self.bn1(x)
-            x = self.relu(x)
-            x = self.maxpool(x)
-        
-        x1 = self.layer1(x)
-        x2 = self.layer2(x1)
-        x3 = self.layer3(x2)
-        x4 = self.layer4(x3)
+        # densenet to get features 
+        img_feats = self.features(x)
 
-        return x, x4
+        # use 1*1 conv to make output dimension as 2048
+        img_feats = self.conv1(img_feats)
+
+        return img_feats
 
     def init_weights(self):
-        org_resnet = torch.utils.model_zoo.load_url(model_urls[self.name])
+        org_densenet = torch.utils.model_zoo.load_url(model_urls[self.name])
         # drop orginal resnet fc layer, add 'None' in case of no fc layer, that will raise error
-        org_resnet.pop('fc.weight', None)
-        org_resnet.pop('fc.bias', None)
+        # org_resnet.pop('fc.weight', None)
+        # org_resnet.pop('fc.bias', None)
         
-        self.load_state_dict(org_resnet)
-        print("Initialize resnet from model zoo")
+        self.load_state_dict(org_densenet)
+        print("Initialize densenet from model zoo")
 
 
