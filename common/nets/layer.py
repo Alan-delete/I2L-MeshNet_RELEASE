@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from config import cfg
+from nets.layer import make_conv_layers, make_deconv_layers, make_conv1d_layers, make_linear_layers
 
 def make_linear_layers(feat_dims, relu_final=True, use_bn=False):
     layers = []

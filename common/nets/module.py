@@ -7,14 +7,6 @@ from config import cfg
 import torchgeometry as tgm
 from nets.layer import make_conv_layers, make_deconv_layers, make_conv1d_layers, make_linear_layers
 
-backbone_model = {
-    'densenet121': (densenet121, 32, (6, 12, 24, 16), 64 ),
-    'densenet161': (densenet161, 48, (6, 12, 36, 24), 96 ),
-    'densenet169': (densenet169, 32, (6, 12, 32, 32), 64 ),
-    'densenet201': (densenet201, 32, (6, 12, 48, 32), 64 ),
-
-}
-
 
 class PoseNet(nn.Module):
     def __init__(self, joint_num):

@@ -47,7 +47,8 @@ class DenseNetBackbone(nn.Module):
         # use 1*1 conv to make output dimension as 2048
         img_feats = self.conv1(img_feats)
 
-        return img_feats
+        # x here to cooperate original codes. Delete it in future work
+        return x,img_feats
 
     def init_weights(self):
         org_densenet = torch.utils.model_zoo.load_url(model_urls[self.name])

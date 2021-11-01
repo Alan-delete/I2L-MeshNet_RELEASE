@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 from nets.resnet import ResNetBackbone
+from nets.densenet import DenseNetBackbone
 from nets.module import PoseNet, Pose2Feat, MeshNet, ParamRegressor
 from nets.loss import CoordLoss, ParamLoss, NormalVectorLoss, EdgeLengthLoss
 from utils.smpl import SMPL
@@ -16,16 +17,6 @@ class Model_2Dpose(nn.Module):
         self.pose_backbone = pose_backbone
         self.pose_net = pose_net
         
-        #if 'FreiHAND' in cfg.trainset_3d + cfg.trainset_2d + [cfg.testset]:
-        #    self.human_model = MANO()
-        #    self.human_model_layer = self.human_model.layer.cuda()
-        #else:
-        #    self.human_model = SMPL()
-        #    self.human_model_layer = self.human_model.layer['neutral'].cuda()
-        #self.root_joint_idx = self.human_model.root_joint_idx
-        #self.mesh_face = self.human_model.face
-        #self.joint_regressor = self.human_model.joint_regressor
-
         self.coord_loss = CoordLoss()
         
 
@@ -53,10 +44,6 @@ class Model_2Dpose(nn.Module):
             shared_img_feat, pose_img_feat = self.pose_backbone(inputs['img'])
             joint_coord_img = self.pose_net(pose_img_feat)
             
-            # make 3D heatmap from posenet output and convert to image feature
-            with torch.no_grad():
-                joint_heatmap = self.make_gaussian_heatmap(joint_coord_img.detach())
-
 
         if mode == 'train':
             # loss functions
@@ -87,16 +74,14 @@ def init_weights(m):
         nn.init.normal_(m.weight,std=0.01)
         nn.init.constant_(m.bias,0)
 
-def get_model(vertex_num, joint_num, mode):
-    # resnet has output feature number 2048
-    feat_num = 2048
-    # check whether to use densenet instead of resnet
-
+def get_model(joint_num, mode):
+    pose_backbone = None
     if ('densenet' in cfg.backbone_type):
-        pose_backbone = 
-
-    pose_backbone = ResNetBackbone(cfg.resnet_type)
-    pose_net = PoseNet(feat_num, joint_num)
+        pose_backbone = DenseNetBackbone(cfg.densenet_type)
+    else:
+        pose_backbone = ResNetBackbone(cfg.resnet_type)
+    
+    pose_net = PoseNet(joint_num)
 
     if mode == 'train':
         pose_backbone.init_weights()
