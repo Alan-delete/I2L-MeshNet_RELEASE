@@ -20,8 +20,8 @@ from utils.transforms import pixel2cam, cam2pixel
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--gpu', type=str, dest='gpu_ids')
-    parser.add_argument('--test_epoch', type=str, dest='test_epoch')
+    parser.add_argument('--gpu', type=str, default = '0',dest='gpu_ids')
+    parser.add_argument('--test_epoch', default=12,type=str, dest='test_epoch')
     args = parser.parse_args()
     use_gpu = torch.cuda.is_available()
     if not use_gpu:
