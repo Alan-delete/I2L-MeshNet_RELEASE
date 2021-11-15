@@ -33,21 +33,23 @@ app = Flask(__name__ ,static_folder = 'public',static_url_path='/public')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 CORS(app)
 run_with_ngrok(app)   
-model = None
+
 cudnn.benchmark = True
 
-def init_model(test_epoch = 12):
+def init_model(joint_num = 29,test_epoch = 12,mode = 'test'):
     #cudnn.benchmark = True
 
     # snapshot load
     model_path = os.path.join(cfg.model_dir,'snapshot_%d.pth.tar' % int(test_epoch))
-    assert osp.exists(model_path), 'Cannot find model at ' + model_path
+    assert os.path.exists(model_path), 'Cannot find model at ' + model_path
     print('Load checkpoint from {}'.format(model_path))
-    model = get_model( joint_num)
+    model = get_model( joint_num,mode)
     model = DataParallel(model).cuda()
     ckpt = torch.load(model_path)
     model.load_state_dict(ckpt['network'], strict=False)
     model.eval()
+    return model
+model = init_model()
 
 
 dummyCoordinates = [ 39.7642, 22.7078, 31.9892,
@@ -135,8 +137,11 @@ def get_output(img_path):
 
     # forward
     inputs = {'img': img}
-    print (inputs)
-    return inputs
+    # it is tensor 
+    outputs = model(inputs)
+    
+    # or ? return outputs['joint_coord_img'].cpu().numpy()
+    return outputs['joint_coord_img'].tolist()
 
 @app.route("/imageUpload", methods = ['PUT','POST'])
 def file_upload():
@@ -161,7 +166,7 @@ def file_upload():
     # todo: Call NN api
     # todo alt: Call NN api asynchronously
     data = {'coordinates':dummyCoordinates}
+    print(jsonify(data))
     #return json of coordinates
     return jsonify(data)
-init_model()
 app.run()
