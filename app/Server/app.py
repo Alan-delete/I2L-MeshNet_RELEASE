@@ -9,6 +9,7 @@ import os
 import sys
 import cv2
 from werkzeug.utils import secure_filename
+import numpy as np
 import torch
 import torchvision.transforms as transforms
 from torch.nn.parallel.data_parallel import DataParallel
@@ -33,9 +34,10 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 CORS(app)
 run_with_ngrok(app)   
 model = None
+cudnn.benchmark = True
 
 def init_model(test_epoch = 12):
-    cudnn.benchmark = True
+    #cudnn.benchmark = True
 
     # snapshot load
     model_path = os.path.join(cfg.model_dir,'snapshot_%d.pth.tar' % int(test_epoch))
@@ -117,9 +119,29 @@ def home():
     print(app.static_folder)
     return send_from_directory(app.static_folder, 'index.html')
 
+def get_output(img_path):
+    # prepare input image
+    transform = transforms.ToTensor()
+    original_img = cv2.imread(img_path)
+    original_img_height, original_img_width = original_img.shape[:2]
+
+    # prepare bbox
+    #bbox = [139.41, 102.25, 222.39, 241.57] # xmin, ymin, width, height
+    #bbox = process_bbox(bbox, original_img_width, original_img_height)
+    #img, img2bb_trans, bb2img_trans = generate_patch_image(original_img, bbox, 1.0, 0.0, False, cfg.input_img_shape) 
+    img = original_img
+    img = transform(img.astype(np.float32))/255
+    img = img.cuda()[None,:,:,:]
+
+    # forward
+    inputs = {'img': img}
+    print (inputs)
+    return inputs
+
 @app.route("/imageUpload", methods = ['PUT','POST'])
 def file_upload():
     # print("file uploaded, processing")
+    dummyCoordinates = None
     store_folder = os.path.join(app.static_folder, app.config['UPLOAD_FOLDER'])
     if not os.path.exists(store_folder):
         os.mkdir(store_folder)
@@ -134,8 +156,7 @@ def file_upload():
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
             file.save(os.path.join(store_folder, filename))
-            img = cv2.imread(os.path.join(store_folder, filename))
-            print(img)
+            dummyCoordinates = get_output(os.path.join(store_folder, filename))
             
     # todo: Call NN api
     # todo alt: Call NN api asynchronously
