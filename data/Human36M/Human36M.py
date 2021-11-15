@@ -11,7 +11,7 @@ import transforms3d
 from pycocotools.coco import COCO
 from config import cfg
 #from utils.smpl import SMPL
-from utils.preprocessing import load_img, get_bbox, process_bbox, generate_patch_image, augmentation
+from utils.preprocessing import load_img,get_bbox, process_bbox, generate_patch_image,augmentation,root_joint_normalize
 from utils.transforms import world2cam, cam2pixel, pixel2cam, rigid_align, transform_joint_to_other_db
 from utils.vis import vis_keypoints, vis_mesh, save_obj
 
@@ -318,8 +318,9 @@ class Human36M(torch.utils.data.Dataset):
             [0, 0, 1]], dtype=np.float32)
             # h36m coordinate
             h36m_joint_cam = np.dot(rot_aug_mat, h36m_joint_cam.transpose(1,0)).transpose(1,0) / 1000 # milimeter to meter
+            h36m_joint_root = root_joint_normalize(h36m_joint_cam,self.h36m_joints_name)
             inputs = {'img': img}
-            targets = {'orig_joint_img': h36m_joint_img, 'orig_joint_cam': h36m_joint_cam}
+            targets ={'orig_joint_img':h36m_joint_img,'orig_joint_cam': h36m_joint_cam,'normalize_joint_root':h36m_joint_root}
             meta_info = {'orig_joint_valid': h36m_joint_valid, 'orig_joint_trunc': h36m_joint_trunc, 'is_3D': float(True)}
             return inputs, targets, meta_info
         else:

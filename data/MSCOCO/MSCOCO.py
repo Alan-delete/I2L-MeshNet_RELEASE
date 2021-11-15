@@ -12,7 +12,7 @@ import torch
 #import transforms3d
 from pycocotools.coco import COCO
 #from utils.smpl import SMPL
-from utils.preprocessing import load_img, process_bbox, augmentation
+from utils.preprocessing import load_img,process_bbox, augmentation,root_joint_normalize
 #from utils.vis import vis_keypoints, vis_mesh, save_obj
 from utils.transforms import world2cam, cam2pixel, pixel2cam, transform_joint_to_other_db
 
@@ -155,6 +155,12 @@ class MSCOCO(torch.utils.data.Dataset):
             # transform coco joints to target db joints
             coco_joint_img = transform_joint_to_other_db(coco_joint_img, self.coco_joints_name, self.joints_name)
             coco_joint_cam = np.zeros((self.joint_num,3), dtype=np.float32) # dummy
+            
+            # create root-relative and normalized
+            # joints coordinates
+            coco_joint_root = root_joint_normalize(coco_joint_img,self.coco_joints_name)
+
+            
             coco_joint_valid = transform_joint_to_other_db(coco_joint_valid, self.coco_joints_name, self.joints_name)
             coco_joint_trunc = transform_joint_to_other_db(coco_joint_trunc, self.coco_joints_name, self.joints_name)
             
@@ -163,7 +169,7 @@ class MSCOCO(torch.utils.data.Dataset):
             [np.sin(np.deg2rad(-rot)), np.cos(np.deg2rad(-rot)), 0],
             [0, 0, 1]], dtype=np.float32)
             inputs = {'img': img}
-            targets = {'orig_joint_img': coco_joint_img, 'orig_joint_cam': coco_joint_cam}
+            targets ={'orig_joint_img':coco_joint_img,'orig_joint_cam':coco_joint_cam,'normalize_joint_root':coco_joint_root}
             meta_info = {'orig_joint_valid': coco_joint_valid, 'orig_joint_trunc': coco_joint_trunc,  'is_3D': float(False)}
             return inputs, targets, meta_info
         else:

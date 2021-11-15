@@ -45,7 +45,7 @@ def main():
         
         # forward
         with torch.no_grad():
-            out = tester.model(inputs, targets, meta_info, 'test')
+            out = tester.model(inputs )
        
         # save output
         out = {k: v.cpu().numpy() for k,v in out.items()}

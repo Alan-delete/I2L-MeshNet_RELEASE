@@ -21,7 +21,7 @@ class DenseNetBackbone(nn.Module):
 		       169: (densenet169,  32, (6, 12, 32, 32), 64, 'densenet169'),
 		       201: (densenet201, 32, (6, 12, 48, 32), 64, 'densenet201'),}
         densenet, growth_rate, block_config,num_init_features, name = densenet_spec[densenet_type]
-        self.features = densenet(pretrain = True)
+        self.feat_layer = densenet(pretrain = True).features()
         self.name = name
         self.inplanes = 64
         num_features = num_init_features
@@ -42,7 +42,7 @@ class DenseNetBackbone(nn.Module):
 
     def forward(self, x, skip_early=False):
         # densenet to get features 
-        img_feats = self.features(x)
+        img_feats = self.feat_layer(x)
 
         # use 1*1 conv to make output dimension as 2048
         img_feats = self.conv1(img_feats)
