@@ -6,16 +6,47 @@ from flask_cors import CORS
 from markupsafe import escape
 import json
 import os
+import sys
+import cv2
 from werkzeug.utils import secure_filename
+import torch
+import torchvision.transforms as transforms
+from torch.nn.parallel.data_parallel import DataParallel
+import torch.backends.cudnn as cudnn
+
 #from xxx import xxx (import network api)
 UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = {'png','jpg','jpeg'}
+
+# current path is assumed to be root_dir/app/Server/app.py
+root_dir =os.path.dirname( os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+main_dir = os.path.join(root_dir,'main')
+common_dir = os.path.join(root_dir,'common')
+sys.path.append(main_dir)
+sys.path.append(common_dir)
+from config import cfg
+from model import get_model
 
 
 app = Flask(__name__ ,static_folder = 'public',static_url_path='/public')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 CORS(app)
 run_with_ngrok(app)   
+model = None
+
+def init_model(test_epoch = 12):
+    cudnn.benchmark = True
+
+    # snapshot load
+    model_path = os.path.join(cfg.model_dir,'snapshot_%d.pth.tar' % int(test_epoch))
+    assert osp.exists(model_path), 'Cannot find model at ' + model_path
+    print('Load checkpoint from {}'.format(model_path))
+    model = get_model( joint_num)
+    model = DataParallel(model).cuda()
+    ckpt = torch.load(model_path)
+    model.load_state_dict(ckpt['network'], strict=False)
+    model.eval()
+
 
 dummyCoordinates = [ 39.7642, 22.7078, 31.9892,
      
@@ -103,10 +134,13 @@ def file_upload():
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
             file.save(os.path.join(store_folder, filename))
+            img = cv2.imread(os.path.join(store_folder, filename))
+            print(img)
             
     # todo: Call NN api
     # todo alt: Call NN api asynchronously
     data = {'coordinates':dummyCoordinates}
     #return json of coordinates
     return jsonify(data)
+init_model()
 app.run()
