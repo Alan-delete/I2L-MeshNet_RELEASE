@@ -3,7 +3,7 @@ import { OrbitControls } from 'https://cdn.skypack.dev/three@0.133.1/examples/js
 
 const PORT = 5000
 const URL = '127.0.0.1'
-const ngrok_url = ''
+const ngrok_url = 'http://1a0c-35-222-46-113.ngrok.io'
 const canvas = document.getElementById("3dCanvas");
 
 function uploadImage() {
@@ -13,8 +13,8 @@ function uploadImage() {
 form.addEventListener("submit",function(event){
 
     event.preventDefault();
-    let url = `http://${URL}:${PORT}/imageUpload`
-    //let url = `${ngrok_url}/imageUpload`
+    //let url = `http://${URL}:${PORT}/imageUpload`
+    let url = `${ngrok_url}/imageUpload`
     window.alert("trying to upload image to" + url)
 
     let image = document.getElementById("form-image").files[0]
@@ -31,8 +31,8 @@ form.addEventListener("submit",function(event){
         body: formData
     }
     
-    fetch(url,data).then(response => response.json())
-        .then(console.log(data))
+  fetch(url, data).then(response => response.json())
+        .then(data => console.log(data['coordinates']))
         .catch(error => console.log(error))
 
 })
