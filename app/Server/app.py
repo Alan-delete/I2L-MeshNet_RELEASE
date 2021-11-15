@@ -1,7 +1,7 @@
-from flask import Flask
+from flask import Flask, send_from_directory
 from flask import jsonify
 from flask import request
-
+from flask_ngrok import run_with_ngrok
 from flask_cors import CORS
 from markupsafe import escape
 import json
@@ -10,9 +10,12 @@ from werkzeug.utils import secure_filename
 #from xxx import xxx (import network api)
 UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = {'png','jpg','jpeg'}
-app = Flask(__name__, static_url_path='/public')
+
+
+app = Flask(__name__ ,static_folder = 'public',static_url_path='/public')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 CORS(app)
+run_with_ngrok(app)   
 
 dummyCoordinates = [ 39.7642, 22.7078, 31.9892,
      
@@ -77,14 +80,18 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-@app.route("/")
-def hello_world():
-    return 'placdeholder'
+@app.route("/",methods=['GET', 'POST'])
+def home():
+    #return render_template('index.html')
+    print(app.static_folder)
+    return send_from_directory(app.static_folder, 'index.html')
 
 @app.route("/imageUpload", methods = ['PUT','POST'])
 def file_upload():
     # print("file uploaded, processing")
-    
+    store_folder = os.path.join(app.static_folder, app.config['UPLOAD_FOLDER'])
+    if not os.path.exists(store_folder):
+        os.mkdir(store_folder)
     # todo: customize file save name
     # todo alt: directly pass the file to NN api
     if 'image' in request.files:
@@ -95,11 +102,11 @@ def file_upload():
             return redirect(request.url)
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            file.save(os.path.join(store_folder, filename))
             
     # todo: Call NN api
     # todo alt: Call NN api asynchronously
     data = {'coordinates':dummyCoordinates}
     #return json of coordinates
     return jsonify(data)
-    
+app.run()
