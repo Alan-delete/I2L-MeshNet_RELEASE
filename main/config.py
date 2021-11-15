@@ -52,7 +52,7 @@ class Config:
     data_dir = osp.join(root_dir, 'data')
     output_dir = osp.join(root_dir, 'output')
     #model_dir = osp.join(output_dir, 'model_dump')
-    model_dir = osp.join(root_dir, 'weight')
+    model_dir = osp.join(root_dir, 'weights')
     vis_dir = osp.join(output_dir, 'vis')
     log_dir = osp.join(output_dir, 'log')
     result_dir = osp.join(output_dir, 'result')
