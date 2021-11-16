@@ -27,7 +27,8 @@ sys.path.append(main_dir)
 sys.path.append(common_dir)
 from config import cfg
 from model import get_model
-
+from nets.SemGCN.export import SemGCN
+from utils.transforms import transform_joint_to_other_db
 
 app = Flask(__name__ ,static_folder = 'public',static_url_path='/public')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -50,7 +51,7 @@ def init_model(joint_num = 29,test_epoch = 12,mode = 'test'):
     model.eval()
     return model
 model = init_model()
-
+sem_gcn = SemGCN(cfg.skeleton)
 
 dummyCoordinates = [ 39.7642, 22.7078, 31.9892,
      
@@ -139,9 +140,12 @@ def get_output(img_path):
     inputs = {'img': img}
     # it is tensor 
     outputs = model(inputs)
-    
+    target_joint = transform_joint_to_other_db(outputs['joint_coord_img'][0].cpu().detach().numpy(),cfg.smpl_joints_name , cfg.joints_name)
     # or ? return outputs['joint_coord_img'].cpu().numpy()
-    return outputs['joint_coord_img'].tolist()
+    print(target_joint)
+    test = sem_gcn(transform(target_joint[None,:,:2]))
+    return target_joint.tolist()
+    #return outputs['joint_coord_img'].tolist()
 
 @app.route("/imageUpload", methods = ['PUT','POST'])
 def file_upload():
@@ -169,4 +173,5 @@ def file_upload():
     print(jsonify(data))
     #return json of coordinates
     return jsonify(data)
+get_output('/content/I2L-MeshNet_RELEASE/demo/input.jpg')
 app.run()
