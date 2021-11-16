@@ -32,7 +32,12 @@ form.addEventListener("submit",function(event){
     }
     
   fetch(url, data).then(response => response.json())
-        .then(data => console.log(data['coordinates']))
+        .then(
+            data => {
+            console.log(data['coordinates']);
+            update_skeleton(data['coordinates']); 
+                }
+            )
         .catch(error => console.log(error))
 
 })
@@ -156,18 +161,22 @@ let possible_new_position = [[32.5407, 31.5434, 32.0625],
 [33.0859, 30.7670, 29.7692],
 [33.2941, 28.6702, 26.0253],
 [35.1356, 32.5765, 29.6174]]
-var oneD_position = [];
-for(var i = 0; i < position.length; i++)
-{
-    oneD_position = oneD_position.concat(position[i]);
-}
-
 
 
 let camera, controls, scene, renderer,skeleton;
 
+function flatten_array(multi_dim_array){
+    let  oneD_position = [];
+    for(let i = 0; i < multi_dim_array.length; i++)
+    {
+        oneD_position = oneD_position.concat(multi_dim_array[i]);
+    }
+    return oneD_position;
+}
+
 function update_skeleton(new_position){
     //set Pelvis to the origin
+    new_position = flatten_array(new_position);
     let Pelvis_index = 0, chest_index  = 3;
     
     let Pelvis_x = new_position[3*Pelvis_index];
