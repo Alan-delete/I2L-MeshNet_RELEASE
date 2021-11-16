@@ -165,11 +165,12 @@ let possible_new_position = [[32.5407, 31.5434, 32.0625],
 
 let camera, controls, scene, renderer,skeleton;
 
+// 3d ARRAY
 function flatten_array(multi_dim_array){
     let  oneD_position = [];
-    for(let i = 0; i < multi_dim_array.length; i++)
+    for(let i = 0; i < multi_dim_array[0].length; i++)
     {
-        oneD_position = oneD_position.concat(multi_dim_array[i]);
+        oneD_position = oneD_position.concat(multi_dim_array[0][i]);
     }
     return oneD_position;
 }
@@ -177,6 +178,7 @@ function flatten_array(multi_dim_array){
 function update_skeleton(new_position){
     //set Pelvis to the origin
     new_position = flatten_array(new_position);
+    console.log(new_position);
     let Pelvis_index = 0, chest_index  = 3;
     
     let Pelvis_x = new_position[3*Pelvis_index];
@@ -265,7 +267,7 @@ function onWindowResize() {
 function animate() {
 	requestAnimationFrame( animate );
 
-    update_skeleton(oneD_position);
+    //update_skeleton(oneD_position);
 	renderer.render( scene, camera );
 }
 
