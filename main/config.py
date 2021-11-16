@@ -26,6 +26,11 @@ class Config:
     joint_num = 17
     skeleton = ( (0, 7), (7, 8), (8, 9), (9, 10),(8, 11), (11, 12), (12, 13), (8, 14), (14, 15), (15,16), (0, 1), (1, 2), (2, 3), (0, 4), (4, 5), (5, 6))
     root_joint_idx = 0
+    smpl_joint_num = 29 # original: 24. manually add nose, L/R eye, L/R ear
+    smpl_joints_name = ('Pelvis', 'L_Hip', 'R_Hip', 'Torso', 'L_Knee', 'R_Knee', 'Spine', 'L_Ankle', 'R_Ankle', 'Chest', 'L_Toe', 'R_Toe', 'Neck', 'L_Thorax', 'R_Thorax', 'Head', 'L_Shoulder', 'R_Shoulder', 'L_Elbow', 'R_Elbow', 'L_Wrist', 'R_Wrist', 'L_Hand', 'R_Hand', 'Nose', 'L_Eye', 'R_Eye', 'L_Ear', 'R_Ear')
+    smpl_skeleton = ( (0,1), (1,4), (4,7), (7,10), (0,2), (2,5), (5,8), (8,11), (0,3), (3,6), (6,9), (9,14), (14,17), (17,19), (19, 21), (21,23), (9,13), (13,16), (16,18), (18,20), (20,22), (9,12), (12,24), (24,15), (24,25), (24,26), (25,27), (26,28) )
+
+
 
     ## training config
     lr_dec_epoch = [10,12] if 'FreiHAND' not in trainset_3d + trainset_2d + [testset] else [17,21]
