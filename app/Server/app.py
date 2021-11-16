@@ -29,6 +29,7 @@ from config import cfg
 from model import get_model
 from nets.SemGCN.export import SemGCN
 from utils.transforms import transform_joint_to_other_db
+from utils.preprocessing import process_bbox,generate_patch_image
 
 app = Flask(__name__ ,static_folder = 'public',static_url_path='/public')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -142,7 +143,7 @@ def get_output(img_path):
     outputs = model(inputs)
     target_joint = transform_joint_to_other_db(outputs['joint_coord_img'][0].cpu().detach().numpy(),cfg.smpl_joints_name , cfg.joints_name)
     # or ? return outputs['joint_coord_img'].cpu().numpy()
-    print(target_joint)
+    print(torch.from_numpy(target_joint[None,:,:2]))
     test = sem_gcn(transform(target_joint[None,:,:2]))
     return target_joint.tolist()
     #return outputs['joint_coord_img'].tolist()
@@ -173,5 +174,5 @@ def file_upload():
     print(jsonify(data))
     #return json of coordinates
     return jsonify(data)
-get_output('/content/I2L-MeshNet_RELEASE/demo/input.jpg')
+# get_output('/content/I2L-MeshNet_RELEASE/demo/input.jpg')
 app.run()
