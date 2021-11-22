@@ -3,7 +3,7 @@ import { OrbitControls } from 'https://cdn.skypack.dev/three@0.133.1/examples/js
 
 const PORT = 5000
 const URL = '127.0.0.1'
-const ngrok_url = ''
+const ngrok_url = 'http://1a0c-35-222-46-113.ngrok.io'
 const canvas = document.getElementById("3dCanvas");
 
 function uploadImage() {
@@ -13,8 +13,8 @@ function uploadImage() {
 form.addEventListener("submit",function(event){
 
     event.preventDefault();
-    let url = `http://${URL}:${PORT}/imageUpload`
-    //let url = `${ngrok_url}/imageUpload`
+    //let url = `http://${URL}:${PORT}/imageUpload`
+    let url = `${ngrok_url}/imageUpload`
     window.alert("trying to upload image to" + url)
 
     let image = document.getElementById("form-image").files[0]
@@ -31,11 +31,33 @@ form.addEventListener("submit",function(event){
         body: formData
     }
     
-    fetch(url,data).then(response => response.json())
-        .then(console.log(data))
+  fetch(url, data).then(response => response.json())
+        .then(
+            data => {
+            console.log(data['coordinates']);
+            update_skeleton(data['coordinates']); 
+                }
+            )
         .catch(error => console.log(error))
 
 })
+const Skeleton=  
+[   0, 7, 
+    7, 8,
+    8, 9, 
+    9, 10,
+    8, 11, 
+    11, 12, 
+    12, 13, 
+    8, 14, 
+    14, 15, 
+    15,16, 
+    0, 1, 
+    1, 2, 
+    2, 3, 
+    0, 4, 
+    4, 5, 
+    5, 6 ];
 
 const indices = 
 [   0,1,
@@ -127,47 +149,23 @@ var position =
     46.2133,  9.2510, 16.5609,
      ]
 
-let possible_new_position = [[32.5407, 31.5434, 32.0625],
-[32.0831, 31.5208, 32.6997],
-[32.8597, 31.7833, 32.8044],
-[33.7914, 31.2277, 31.6434],
-[31.3528, 33.2767, 35.0507],
-[29.4545, 33.3968, 27.2765],
-[34.6095, 31.0597, 30.3914],
-[32.6895, 36.0617, 41.2097],
-[31.2094, 36.8942, 43.9023],
-[34.3237, 31.4657, 31.1524],
-[31.3542, 33.0677, 45.9145],
-[31.8602, 33.6842, 39.9711],
-[36.2314, 32.1091, 29.8994],
-[34.8465, 30.9072, 29.8246],
-[36.3953, 32.6197, 30.3386],
-[35.1741, 29.5423, 31.1576],
-[34.6915, 30.3615, 32.2895],
-[36.0089, 32.2513, 32.0608],
-[31.3736, 33.2176, 31.3728],
-[30.9953, 34.5236, 33.4797],
-[26.0312, 33.2727, 30.1604],
-[22.2192, 33.6117, 30.6902],
-[23.9756, 31.2753, 28.5218],
-[17.2580, 34.9558, 34.4542],
-[32.8368, 28.9838, 23.8058],
-[32.8343, 27.8043, 22.3165],
-[33.0859, 30.7670, 29.7692],
-[33.2941, 28.6702, 26.0253],
-[35.1356, 32.5765, 29.6174]]
-var oneD_position = [];
-for(var i = 0; i < position.length; i++)
-{
-    oneD_position = oneD_position.concat(position[i]);
-}
-
-
 
 let camera, controls, scene, renderer,skeleton;
 
+// 3d ARRAY
+function flatten_array(multi_dim_array){
+    let  oneD_position = [];
+    for(let i = 0; i < multi_dim_array[0].length; i++)
+    {
+        oneD_position = oneD_position.concat(multi_dim_array[0][i]);
+    }
+    return oneD_position;
+}
+
 function update_skeleton(new_position){
     //set Pelvis to the origin
+    new_position = flatten_array(new_position);
+    console.log(new_position);
     let Pelvis_index = 0, chest_index  = 3;
     
     let Pelvis_x = new_position[3*Pelvis_index];
@@ -256,7 +254,7 @@ function onWindowResize() {
 function animate() {
 	requestAnimationFrame( animate );
 
-    update_skeleton(oneD_position);
+    //update_skeleton(oneD_position);
 	renderer.render( scene, camera );
 }
 

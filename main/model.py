@@ -44,7 +44,7 @@ class Model_2Dpose(nn.Module):
         # test output
         out = {}
         out['joint_coord_img'] = joint_coord_img
-        out['bb2img_trans'] = meta_info['bb2img_trans']
+        #out['bb2img_trans'] = meta_info['bb2img_trans']
 
         return out
 
