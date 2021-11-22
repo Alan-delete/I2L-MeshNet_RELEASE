@@ -16,8 +16,7 @@ class Model_2Dpose(nn.Module):
         self.pose_net = pose_net
         
         self.coord_loss = CoordLoss()
-        
-
+        self.trainable_modules = [self.pose_backbone, self.pose_net]
    
     def make_gaussian_heatmap(self, joint_coord_img):
         x = torch.arange(cfg.output_hm_shape[2])

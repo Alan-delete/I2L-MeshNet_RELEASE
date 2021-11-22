@@ -8,9 +8,9 @@ from base import Tester
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--gpu', type=str, dest='gpu_ids')
-    parser.add_argument('--stage', type=str, dest='stage')
-    parser.add_argument('--test_epoch', type=str, dest='test_epoch')
+    parser.add_argument('--test_epoch', default = '12', type=str, dest='test_epoch')
+    parser.add_argument('--gpu', type=str,default='0', dest='gpu_ids')
+    parser.add_argument('--stage', type=str,default ='lixel', dest='stage')
     args = parser.parse_args()
 
     if not args.gpu_ids:
