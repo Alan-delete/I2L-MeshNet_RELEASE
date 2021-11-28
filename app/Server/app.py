@@ -14,10 +14,19 @@ import torch
 import torchvision.transforms as transforms
 from torch.nn.parallel.data_parallel import DataParallel
 import torch.backends.cudnn as cudnn
+from importlib import reload
 
-#from xxx import xxx (import network api)
 UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = {'png','jpg','jpeg'}
+
+#Dish quota exceed 
+#YOLO_dir = '../weights'
+#torch.hub.set_dir(YOLO_dir)
+YOLO5_model = torch.hub.load('ultralytics/yolov5','yolov5m', pretrained=True)
+YOLO5_model.cuda()
+
+# There is 'utils' in YOLO which will conflict with local 'utils' module, we need to import and override utils 
+import utils
 
 # current path is assumed to be root_dir/app/Server/app.py
 root_dir =os.path.dirname( os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -25,6 +34,9 @@ main_dir = os.path.join(root_dir,'main')
 common_dir = os.path.join(root_dir,'common')
 sys.path.append(main_dir)
 sys.path.append(common_dir)
+
+reload(utils)
+
 from config import cfg
 from model import get_model
 from nets.SemGCN.export import SemGCN
@@ -35,7 +47,6 @@ app = Flask(__name__ ,static_folder = 'public',static_url_path='/public')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 CORS(app)
 run_with_ngrok(app)   
-
 cudnn.benchmark = True
 
 def init_model(joint_num = 29,test_epoch = 12,mode = 'test'):
@@ -130,10 +141,23 @@ def get_output(img_path):
     original_img_height, original_img_width = original_img.shape[:2]
 
     # prepare bbox
+    # shape of (N = number of detected objects ,6)   xmin   ymin    xmax    ymax  confidence class
+    bboxs = YOLO5_model([img_path]).xyxy[0]
+    bboxs = bboxs [ bboxs[: , 5] ==0 ]
+    # the bbox is already sorted by confidence
+    bbox = []
+    if len(bboxs >0):
+        xmin = bboxs[0][0]
+        ymin = bboxs[0][1]
+        width = bboxs[0][2] - xmin
+        height = bboxs[0][3] - ymin
+        bbox = [xmin , ymin, width, height]
+    else:
+        bbox = [1.0, 1.0, original_img_width, orignal_img_height]
+    
     #bbox = [139.41, 102.25, 222.39, 241.57] # xmin, ymin, width, height
-    #bbox = process_bbox(bbox, original_img_width, original_img_height)
-    #img, img2bb_trans, bb2img_trans = generate_patch_image(original_img, bbox, 1.0, 0.0, False, cfg.input_img_shape) 
-    img = original_img
+    bbox = process_bbox(bbox, original_img_width, original_img_height)
+    img, img2bb_trans, bb2img_trans = generate_patch_image(original_img, bbox, 1.0, 0.0, False, cfg.input_img_shape) 
     img = transform(img.astype(np.float32))/255
     img = img.cuda()[None,:,:,:]
 

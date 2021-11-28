@@ -9,9 +9,22 @@ import torchvision.transforms as transforms
 from torch.nn.parallel.data_parallel import DataParallel
 import torch.backends.cudnn as cudnn
 
+from importlib import reload
+
+# no enough disk quota 
+# torch.hub.set_dir('../weights')
+
+# load pretrained YOLO5
+YOLO5_model = torch.hub.load('ultralytics/yolov5','yolov5m',force_reload = True, pretrained=True)
+YOLO5_model.cuda()
+
+# need to import and reload utils, because there is also 'utils' package in YOLO being used.
+import utils
 sys.path.insert(0, osp.join('..', 'main'))
 sys.path.insert(0, osp.join('..', 'data'))
 sys.path.insert(0, osp.join('..', 'common'))
+reload(utils)
+
 from config import cfg
 from model import get_model
 from utils.preprocessing import process_bbox, generate_patch_image
@@ -72,8 +85,6 @@ original_img = cv2.imread(img_path)
 original_img_height, original_img_width = original_img.shape[:2]
 
 # prepare bbox
-YOLO5_model = torch.hub.load('ultralytics/yolov5', 'yolov5m', pretrained=True)
-YOLO5_model.cuda()
 # shape of (N = number of detected objects ,6)   xmin	ymin	xmax	ymax  confidence class
 bboxs = YOLO5_model([img_path]).xyxy[0]
 bboxs = bboxs [ bboxs[: , 5] ==0 ]
