@@ -7,7 +7,7 @@ import random
 import json
 import math
 import copy
-import transforms3d
+#import transforms3d
 from pycocotools.coco import COCO
 from config import cfg
 #from utils.smpl import SMPL

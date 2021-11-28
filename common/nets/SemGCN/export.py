@@ -13,7 +13,7 @@ class SemGCN(standard_SemGCN):
         for edge in edges:
             num_joints = max (edge[0]+1,edge[1]+1,num_joints )
         adj = adj_mx_from_edges(num_joints,edges, sparse = False)
-        print(adj)
+        #print(adj)
         super().__init__(adj, hid_dim)
 #cudnn.benchmark = True
 

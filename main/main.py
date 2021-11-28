@@ -26,6 +26,7 @@ def parse_args():
     use_gpu = torch.cuda.is_available()
     if not use_gpu:
         assert 0, print("Lack of gpu")
+    
     # test gpus
     if not args.gpu_ids:
         assert 0, print("Please set proper gpu ids")
@@ -52,7 +53,9 @@ skeleton = ( (0,1), (1,4), (4,7), (7,10), (0,2), (2,5), (5,8), (8,11), (0,3), (3
 
 # snapshot load
 
-model_path = '../weights/snapshot_%d.pth.tar' % int(args.test_epoch)
+#model_path = '../weights/snapshot_%d.pth.tar' % int(args.test_epoch)
+
+model_path = os.path.join(cfg.model_dir, 'snapshot_demo.pth.tar')
 assert osp.exists(model_path), 'Cannot find model at ' + model_path
 print('Load checkpoint from {}'.format(model_path))
 model = get_model( joint_num, 'test')
@@ -69,9 +72,26 @@ original_img = cv2.imread(img_path)
 original_img_height, original_img_width = original_img.shape[:2]
 
 # prepare bbox
+YOLO5_model = torch.hub.load('ultralytics/yolov5', 'yolov5m', pretrained=True)
+YOLO5_model.cuda()
+# shape of (N = number of detected objects ,6)   xmin	ymin	xmax	ymax  confidence class
+bboxs = YOLO5_model([img_path]).xyxy[0]
+bboxs = bboxs [ bboxs[: , 5] ==0 ]
+# the bbox is already sorted by confidence
+bbox = []
+if len(bboxs >0):
+    xmin = bboxs[0][0]
+    ymin = bboxs[0][1]
+    width = bboxs[0][2] - xmin
+    height = bboxs[0][3] - ymin
+    bbox = [xmin , ymin, width, height]
+else:
+    bbox = [1.0, 1.0, original_img_width, orignal_img_height] 
+
 #bbox = [139.41, 102.25, 222.39, 241.57] # xmin, ymin, width, height
-#bbox = process_bbox(bbox, original_img_width, original_img_height)
-#img, img2bb_trans, bb2img_trans = generate_patch_image(original_img, bbox, 1.0, 0.0, False, cfg.input_img_shape) 
+bbox = process_bbox(bbox, original_img_width, original_img_height)
+img, img2bb_trans, bb2img_trans = generate_patch_image(original_img, bbox, 1.0, 0.0, False, cfg.input_img_shape) 
+
 img = original_img
 img = transform(img.astype(np.float32))/255
 img = img.cuda()[None,:,:,:]
