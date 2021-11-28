@@ -31,12 +31,15 @@ class MSCOCO(torch.utils.data.Dataset):
         self.coco_skeleton = ( (1, 2), (0, 1), (0, 2), (2, 4), (1, 3), (6, 8), (8, 10), (5, 7), (7, 9), (12, 14), (14, 16), (11, 13), (13, 15), (5, 6), (11, 12) )
         self.coco_flip_pairs = ( (1, 2), (3, 4), (5, 6), (7, 8), (9, 10), (11, 12), (13, 14), (15, 16) )
         self.coco_joint_regressor = np.load(osp.join('..', 'data', 'MSCOCO', 'J_regressor_coco_hip_smpl.npy'))
-
-        self.joint_num = cfg.joint_num
-        self.joints_name = cfg.joints_name
-        self.skeleton = cfg.skeleton
-        self.root_joint_idx = cfg.root_joint_idx
-
+        if (data_split == 'test'):
+            self.joint_num = cfg.smpl_joint_num
+            self.joints_name = cfg.smpl_joints_name
+            self.skeleton = cfg.smpl_skeleton
+        else:
+            self.joint_num = cfg.joint_num
+            self.joints_name = cfg.joints_name
+            self.skeleton = cfg.skeleton
+        self.root_joint_idx = self.joints_name.index('Pelvis') 
         self.datalist = self.load_data()
 
     def add_pelvis(self, joint_coord):
@@ -131,8 +134,8 @@ class MSCOCO(torch.utils.data.Dataset):
             # coco gt
             coco_joint_img = data['joint_img']
             coco_joint_valid = data['joint_valid']
-            print('here test coco_joint', coco_joint_img)
-            print('here test cooc_valid',coco_joint_valid)
+            #print('here test coco_joint', coco_joint_img)
+            #print('here test cooc_valid',coco_joint_valid)
             if do_flip:
                 coco_joint_img[:,0] = img_shape[1] - 1 - coco_joint_img[:,0]
                 for pair in self.coco_flip_pairs:
@@ -156,9 +159,10 @@ class MSCOCO(torch.utils.data.Dataset):
             coco_joint_img = transform_joint_to_other_db(coco_joint_img, self.coco_joints_name, self.joints_name)
             coco_joint_cam = np.zeros((self.joint_num,3), dtype=np.float32) # dummy
             
+            
             # create root-relative and normalized
             # joints coordinates
-            coco_joint_root = root_joint_normalize(coco_joint_img,self.coco_joints_name)
+            coco_joint_root = root_joint_normalize(coco_joint_img,self.joints_name)
 
             
             coco_joint_valid = transform_joint_to_other_db(coco_joint_valid, self.coco_joints_name, self.joints_name)

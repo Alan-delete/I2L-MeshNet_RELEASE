@@ -78,8 +78,9 @@ img = img.cuda()[None,:,:,:]
 
 # forward
 inputs = {'img': img}
+targets = {}
 meta_info = {'bb2img_trans':None}
 with torch.no_grad():
-    out = model(inputs )
+    out = model(inputs,targets, meta_info, 'test' )
 print(out)
 

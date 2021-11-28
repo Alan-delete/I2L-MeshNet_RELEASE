@@ -138,9 +138,11 @@ def get_output(img_path):
     img = img.cuda()[None,:,:,:]
 
     # forward
-    inputs = {'img': img}
+    inputs = {'img': img}i
+    targets = {}
+    meta_info = {'bb2img_trans': None}
     # it is tensor 
-    outputs = model(inputs)
+    outputs = model(inputs, targets, meta_info, 'test')
     target_joint = transform_joint_to_other_db(outputs['joint_coord_img'][0].cpu().detach().numpy(),cfg.smpl_joints_name , cfg.joints_name)
     # or ? return outputs['joint_coord_img'].cpu().numpy()
     print(torch.from_numpy(target_joint[None,:,:2]))

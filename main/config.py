@@ -34,7 +34,7 @@ class Config:
 
     ## training config
     lr_dec_epoch = [10,12] if 'FreiHAND' not in trainset_3d + trainset_2d + [testset] else [17,21]
-    end_epoch = 13 if 'FreiHAND' not in trainset_3d + trainset_2d + [testset] else 25
+    end_epoch = 5 if 'FreiHAND' not in trainset_3d + trainset_2d + [testset] else 25
     lr = 1e-4
     lr_dec_factor = 10
     train_batch_size = 8
@@ -42,14 +42,14 @@ class Config:
 
     ## testing config
     test_batch_size = 8
-    use_gt_info = False
+    use_gt_info = True # set it False when YOLO is ready`
 
     ## others
     num_thread = 10
     gpu_ids = '0'
     num_gpus = 1
     stage = '2D' # 2D ,3D
-    continue_train = False
+    continue_train = True#False
     
     ## directory
     cur_dir = osp.dirname(os.path.abspath(__file__))

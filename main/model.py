@@ -29,7 +29,7 @@ class Model_2Dpose(nn.Module):
         heatmap = torch.exp(-(((xx-x)/cfg.sigma)**2)/2 -(((yy-y)/cfg.sigma)**2)/2 - (((zz-z)/cfg.sigma)**2)/2)
         return heatmap
     
-    def forward(self, inputs):
+    def forward(self, inputs, targets, meta_info, mode = 'test'):
 
         #if cfg.stage == 'lixel':
         #    cm = nullcontext()
@@ -40,13 +40,17 @@ class Model_2Dpose(nn.Module):
             # posenet forward
             shared_img_feat, pose_img_feat = self.pose_backbone(inputs['img'])
         joint_coord_img = self.pose_net(pose_img_feat)
-        
+        #print('joint_coord_img is:',joint_coord_img)
         # test output
-        out = {}
-        out['joint_coord_img'] = joint_coord_img
-        #out['bb2img_trans'] = meta_info['bb2img_trans']
-
-        return out
+        if (mode=='train'):
+            loss = {}
+            loss['joint_orig'] = self.coord_loss(joint_coord_img, targets['orig_joint_img'], valid = meta_info['orig_joint_trunc'] ,is_3D = meta_info['is_3D'])
+            return loss
+        else:
+            out = {}
+            out['joint_coord_img'] = joint_coord_img
+            out['bb2img_trans'] = meta_info['bb2img_trans']
+            return out
 
 def init_weights(m):
     if type(m) == nn.ConvTranspose2d:

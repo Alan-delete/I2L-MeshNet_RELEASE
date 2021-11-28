@@ -52,7 +52,7 @@ class Trainer(Base):
     def get_optimizer(self, model):
         total_params = []
         for module in model.module.trainable_modules:
-            total_params.append(module.parameters())
+            total_params += list(module.parameters())
         optimizer = torch.optim.Adam(total_params, lr=cfg.lr)
         return optimizer
 
@@ -151,18 +151,19 @@ class Tester(Base):
         batch_generator = DataLoader(dataset=testset_loader, batch_size=cfg.num_gpus*cfg.test_batch_size, shuffle=False, num_workers=cfg.num_thread, pin_memory=True)
         
         self.testset = testset_loader
-        self.vertex_num = testset_loader.vertex_num
+        #self.vertex_num = testset_loader.vertex_num
         self.joint_num = testset_loader.joint_num
         self.batch_generator = batch_generator
 
     def _make_model(self):
-        model_path = os.path.join(cfg.model_dir, 'snapshot_%d.pth.tar' % self.test_epoch)
+        #model_path = os.path.join(cfg.model_dir, 'snapshot_%d.pth.tar' % self.test_epoch)
+        model_path = os.path.join(cfg.model_dir, 'snapshot_demo.pth.tar' )
         assert os.path.exists(model_path), 'Cannot find model at ' + model_path
         self.logger.info('Load checkpoint from {}'.format(model_path))
         
         # prepare network
         self.logger.info("Creating graph...")
-        model = get_model(self.vertex_num, self.joint_num, 'test')
+        model = get_model( self.joint_num, 'test')
         model = DataParallel(model).cuda()
         ckpt = torch.load(model_path)
         model.load_state_dict(ckpt['network'], strict=False)
