@@ -155,9 +155,13 @@ let camera, controls, scene, renderer,skeleton;
 // 3d ARRAY
 function flatten_array(multi_dim_array){
     let  oneD_position = [];
-    for(let i = 0; i < multi_dim_array[0].length; i++)
+    /*for(let i = 0; i < multi_dim_array[0].length; i++)
     {
         oneD_position = oneD_position.concat(multi_dim_array[0][i]);
+    }*/
+    for(let i = 0; i < multi_dim_array.length; i++)
+    {
+        oneD_position = oneD_position.concat(multi_dim_array[i]);
     }
     return oneD_position;
 }

@@ -39,7 +39,7 @@ reload(utils)
 
 from config import cfg
 from model import get_model
-from nets.SemGCN.export import SemGCN
+#from nets.SemGCN.export import SemGCN
 from utils.transforms import transform_joint_to_other_db
 from utils.preprocessing import process_bbox,generate_patch_image
 
@@ -50,10 +50,9 @@ run_with_ngrok(app)
 cudnn.benchmark = True
 
 def init_model(joint_num = 29,test_epoch = 12,mode = 'test'):
-    #cudnn.benchmark = True
 
     # snapshot load
-    model_path = os.path.join(cfg.model_dir,'snapshot_%d.pth.tar' % int(test_epoch))
+    model_path = os.path.join(cfg.model_dir,'snapshot_demo.pth.tar')
     assert os.path.exists(model_path), 'Cannot find model at ' + model_path
     print('Load checkpoint from {}'.format(model_path))
     model = get_model( joint_num,mode)
@@ -63,7 +62,7 @@ def init_model(joint_num = 29,test_epoch = 12,mode = 'test'):
     model.eval()
     return model
 model = init_model()
-sem_gcn = SemGCN(cfg.skeleton)
+#sem_gcn = SemGCN(cfg.skeleton)
 
 dummyCoordinates = [ 39.7642, 22.7078, 31.9892,
      
@@ -134,6 +133,8 @@ def home():
     print(app.static_folder)
     return send_from_directory(app.static_folder, 'index.html')
 
+
+
 def get_output(img_path):
     # prepare input image
     transform = transforms.ToTensor()
@@ -162,17 +163,16 @@ def get_output(img_path):
     img = img.cuda()[None,:,:,:]
 
     # forward
-    inputs = {'img': img}i
+    inputs = {'img': img}
     targets = {}
     meta_info = {'bb2img_trans': None}
     # it is tensor 
-    outputs = model(inputs, targets, meta_info, 'test')
-    target_joint = transform_joint_to_other_db(outputs['joint_coord_img'][0].cpu().detach().numpy(),cfg.smpl_joints_name , cfg.joints_name)
-    # or ? return outputs['joint_coord_img'].cpu().numpy()
-    print(torch.from_numpy(target_joint[None,:,:2]))
-    test = sem_gcn(transform(target_joint[None,:,:2]))
-    return target_joint.tolist()
-    #return outputs['joint_coord_img'].tolist()
+    out = model(inputs, targets, meta_info, 'test')
+    # of shape (29,3) (17,3)
+    I2L_joints = out['joint_coor_img'][0]
+    human36_joints = transform_joint_to_other_db(I2L_joints.cpu().numpy(),cfg.smpl_joints_name , cfg.joints_name)
+    #sem_joints = sem_gcn(torch.from_numpy(human36_joints).cuda()[...,:2])[0]
+    return I2L_joints.tolist()
 
 @app.route("/imageUpload", methods = ['PUT','POST'])
 def file_upload():
@@ -194,10 +194,7 @@ def file_upload():
             file.save(os.path.join(store_folder, filename))
             dummyCoordinates = get_output(os.path.join(store_folder, filename))
             
-    # todo: Call NN api
-    # todo alt: Call NN api asynchronously
     data = {'coordinates':dummyCoordinates}
-    print(jsonify(data))
     #return json of coordinates
     return jsonify(data)
 # get_output('/content/I2L-MeshNet_RELEASE/demo/input.jpg')
