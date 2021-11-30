@@ -3,8 +3,8 @@ import { OrbitControls } from 'https://cdn.skypack.dev/three@0.133.1/examples/js
 
 const PORT = 5000
 const URL = '127.0.0.1'
-var ngrok_url = window.location.href;
-const canvas = document.getElementById("3dCanvas");
+var ngrok_url = window.location.href
+const canvas = document.getElementById("3dCanvas")
 
 function uploadImage() {
 
@@ -34,8 +34,8 @@ form.addEventListener("submit",function(event){
   fetch(url, data).then(response => response.json())
         .then(
             data => {
-            console.log(data['coordinates']);
-            update_skeleton(data['coordinates']); 
+            console.log(data);
+            update_skeleton(data['I2L_joints']); 
                 }
             )
         .catch(error => console.log(error))
