@@ -6,9 +6,7 @@ const URL = '127.0.0.1'
 var ngrok_url = window.location.href
 const canvas = document.getElementById("3dCanvas")
 
-function uploadImage() {
 
-}
 
 form.addEventListener("submit",function(event){
 
@@ -35,13 +33,15 @@ form.addEventListener("submit",function(event){
         .then(
             data => {
             console.log(data);
-            update_skeleton(data['I2L_joints']); 
+            update_skeleton(data['I2L_joints'], I2L_skeleton);
+            update_skeleton(data['human36_joints'], human36_skeleton);
+            update_skeleton(data['Sem_joints'], Sem_skeleton); 
                 }
             )
         .catch(error => console.log(error))
 
 })
-const Skeleton=  
+const human36_indices=  
 [   0, 7, 
     7, 8,
     8, 9, 
@@ -59,7 +59,7 @@ const Skeleton=
     4, 5, 
     5, 6 ];
 
-const indices = 
+const I2L_indices = 
 [   0,1,
     1,4,
     4,7,
@@ -89,7 +89,7 @@ const indices =
     25,27,
     26,28,];
 
-var position =
+var init_position =
 [   39.7642, 22.7078, 31.9892,
      
     40.6116, 26.0905, 34.2193,
@@ -150,9 +150,9 @@ var position =
      ]
 
 
-let camera, controls, scene, renderer,skeleton;
+let camera, controls, scene, renderer,I2L_skeleton, human36_skeleton,Sem_skeleton;
 
-// 3d ARRAY
+// 2d ARRAY
 function flatten_array(multi_dim_array){
     let  oneD_position = [];
     /*for(let i = 0; i < multi_dim_array[0].length; i++)
@@ -166,11 +166,11 @@ function flatten_array(multi_dim_array){
     return oneD_position;
 }
 
-function update_skeleton(new_position){
+function update_skeleton(new_position,skeleton){
     //set Pelvis to the origin
     new_position = flatten_array(new_position);
     console.log(new_position);
-    let Pelvis_index = 0, chest_index  = 3;
+    let Pelvis_index = 0;
     
     let Pelvis_x = new_position[3*Pelvis_index];
     let Pelvis_y = new_position[3*Pelvis_index+1];
@@ -188,30 +188,49 @@ function update_skeleton(new_position){
     }
 
 
-function create_skelton(position){
+function create_skelton(position, indices){
     //set Pelvis to the origin
-    let Pelvis_index = 0, chest_index  = 3;
-
-    let Pelvis_x = position[3*Pelvis_index];
-    let Pelvis_y = position[3*Pelvis_index+1];
-    let Pelvis_z = position[3*Pelvis_index+2];
-    for (let i=0; i<position.length; i+=3){
-
-        position[i] -=  Pelvis_x;
-        position[i+1] -=  Pelvis_y;
-        position[i+2] -=  Pelvis_z;
-    }   
+  if (position.length == 0) {
 
     const geometry = new THREE.BufferGeometry();    
     geometry.setIndex(indices);    
     geometry.setAttribute('position', new THREE.Float32BufferAttribute(position,3));
     
     const material = new THREE.MeshBasicMaterial( { color: 0xFF69B4 } );
-    skeleton = new THREE.LineSegments(geometry, material);
+    let skeleton = new THREE.LineSegments(geometry, material);
+    const quaternion = new THREE.Quaternion();
+    //quaternion.setFromUnitVectors( spine_vecotor,new THREE.Vector3( 0, 1, 0 ) );
+    quaternion.setFromAxisAngle( new THREE.Vector3( 1, 0, 0 ), Math.PI  );
+    skeleton.applyQuaternion(quaternion);
+    return skeleton;
+
+    
+  }
+  
+    let Pelvis_index = 0, chest_index = 3;
+
+    let Pelvis_x = position[3 * Pelvis_index];
+    let Pelvis_y = position[3 * Pelvis_index + 1];
+    let Pelvis_z = position[3 * Pelvis_index + 2];
+    for (let i = 0; i < position.length; i += 3) {
+
+      position[i] -= Pelvis_x;
+      position[i + 1] -= Pelvis_y;
+      position[i + 2] -= Pelvis_z;
+    }
+  
+
+    const geometry = new THREE.BufferGeometry();    
+    geometry.setIndex(indices);    
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(position,3));
+    
+    const material = new THREE.MeshBasicMaterial( { color: 0xFF69B4 } );
+    let skeleton = new THREE.LineSegments(geometry, material);
     
     let spine_vecotor = new THREE.Vector3( position[chest_index*3]-position[Pelvis_index*3], position[chest_index*3+1]-position[Pelvis_index*3+1], position[chest_index*3+2]-position[Pelvis_index*3+2] ).normalize();
     const quaternion = new THREE.Quaternion();
-    quaternion.setFromUnitVectors( spine_vecotor,new THREE.Vector3( 0, 1, 0 ) );
+    //quaternion.setFromUnitVectors( spine_vecotor,new THREE.Vector3( 0, 1, 0 ) );
+    quaternion.setFromAxisAngle( new THREE.Vector3( 1, 0, 0 ), Math.PI  );
     skeleton.applyQuaternion(quaternion);
     
     return skeleton;
@@ -239,8 +258,14 @@ function init(){
     controls = new OrbitControls( camera, renderer.domElement );
     window.addEventListener( 'resize', onWindowResize );
 
-    const skeleton = create_skelton(position);
-    scene.add( skeleton );
+  I2L_skeleton = create_skelton(init_position, I2L_indices);
+    scene.add(I2L_skeleton);
+  human36_skeleton = create_skelton([], human36_indices);
+  human36_skeleton.position.x = -40;
+    scene.add(human36_skeleton);
+  Sem_skeleton = create_skelton([], human36_indices);
+  Sem_skeleton.position.x = 40;
+    scene.add(Sem_skeleton);
 }
 
 
@@ -258,7 +283,6 @@ function onWindowResize() {
 function animate() {
 	requestAnimationFrame( animate );
 
-    //update_skeleton(oneD_position);
 	renderer.render( scene, camera );
 }
 
