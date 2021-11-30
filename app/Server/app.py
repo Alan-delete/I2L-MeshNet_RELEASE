@@ -19,9 +19,7 @@ from importlib import reload
 UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = {'png','jpg','jpeg'}
 
-#Dish quota exceed 
-#YOLO_dir = '../weights'
-#torch.hub.set_dir(YOLO_dir)
+# load YOLO5
 YOLO5_model = torch.hub.load('ultralytics/yolov5','yolov5m', pretrained=True)
 YOLO5_model.cuda()
 
@@ -37,9 +35,11 @@ sys.path.append(common_dir)
 
 reload(utils)
 
+
+
 from config import cfg
 from model import get_model
-#from nets.SemGCN.export import SemGCN
+from nets.SemGCN.export import SemGCN
 from utils.transforms import transform_joint_to_other_db
 from utils.preprocessing import process_bbox,generate_patch_image
 
@@ -49,20 +49,32 @@ CORS(app)
 run_with_ngrok(app)   
 cudnn.benchmark = True
 
-def init_model(joint_num = 29,test_epoch = 12,mode = 'test'):
+def init_I2L(joint_num = 29,test_epoch = 12,mode = 'test'):
 
     # snapshot load
     model_path = os.path.join(cfg.model_dir,'snapshot_demo.pth.tar')
     assert os.path.exists(model_path), 'Cannot find model at ' + model_path
     print('Load checkpoint from {}'.format(model_path))
-    model = get_model( joint_num,mode)
-    model = DataParallel(model).cuda()
+    I2L_model = get_model( joint_num, mode)
+    I2L_model = DataParallel(I2L_model).cuda()
     ckpt = torch.load(model_path)
-    model.load_state_dict(ckpt['network'], strict=False)
-    model.eval()
-    return model
-model = init_model()
-#sem_gcn = SemGCN(cfg.skeleton)
+    I2L_model.load_state_dict(ckpt['network'], strict=False)
+    I2L_model.eval()
+    return I2L_model
+
+def init_semGCN(test_epoch = 1):
+    # snapshot load
+    model_path = os.path.join(cfg.model_dir, 'sem_gcn_epoch{}.pth.tar'.format(test_epoch))
+    assert os.path.exists(model_path), 'Cannot find model at ' + model_path
+    print('Load checkpoint from {}'.format(model_path))
+    SemGCN_model = SemGCN(cfg.skeleton).cuda()
+    ckpt = torch.load(model_path)
+    SemGCN_model.load_state_dict(ckpt['network'], strict=False)
+    SemGCN_model.eval()
+    return SemGCN_model
+
+I2L_model = init_I2L()
+SemGCN_model = init_semGCN()
 
 dummyCoordinates = [ 39.7642, 22.7078, 31.9892,
      
@@ -137,6 +149,7 @@ def home():
 
 def get_output(img_path):
     with torch.no_grad():
+        transform = transforms.ToTensor()
         # prepare input image
         original_img = cv2.imread(img_path)
         original_img_height, original_img_width = original_img.shape[:2]
@@ -167,11 +180,12 @@ def get_output(img_path):
         targets = {}
         meta_info = {'bb2img_trans': None}
         # it is tensor 
-        out = model(inputs, targets, meta_info, 'test')
+        out = I2L_model(inputs, targets, meta_info, 'test')
         # of shape (29,3) (17,3)
         I2L_joints = out['joint_coord_img'][0]
         human36_joints = transform_joint_to_other_db(I2L_joints.cpu().numpy(),cfg.smpl_joints_name , cfg.joints_name)
-        #sem_joints = sem_gcn(torch.from_numpy(human36_joints).cuda()[...,:2])[0]
+        sem_joints = SemGCN_model(torch.from_numpy(human36_joints).cuda()[...,:2])[0]
+        print (sem_joints)
         return I2L_joints.tolist()
     
 @app.route("/imageUpload", methods = ['PUT','POST'])
