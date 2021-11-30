@@ -179,19 +179,22 @@ def get_output(img_path):
         inputs = {'img': img}
         targets = {}
         meta_info = {'bb2img_trans': None}
-        # it is tensor 
         out = I2L_model(inputs, targets, meta_info, 'test')
+        
         # of shape (29,3) (17,3)
         I2L_joints = out['joint_coord_img'][0]
         human36_joints = transform_joint_to_other_db(I2L_joints.cpu().numpy(),cfg.smpl_joints_name , cfg.joints_name)
-        sem_joints = SemGCN_model(torch.from_numpy(human36_joints).cuda()[...,:2])[0]
-        print (sem_joints)
-        return I2L_joints.tolist()
+        Sem_joints = SemGCN_model(torch.from_numpy(human36_joints).cuda()[...,:2])[0]
+
+        return {'I2L_joints':I2L_joints.tolist(),\
+                'human36_joints':human36_joints.tolist(),\
+                'Sem_joints':Sem_joints.tolist() }
+        #return I2L_joints.tolist()
     
 @app.route("/imageUpload", methods = ['PUT','POST'])
 def file_upload():
     # print("file uploaded, processing")
-    dummyCoordinates = None
+    data = None
     store_folder = os.path.join(app.static_folder, app.config['UPLOAD_FOLDER'])
     if not os.path.exists(store_folder):
         os.mkdir(store_folder)
@@ -206,10 +209,9 @@ def file_upload():
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
             file.save(os.path.join(store_folder, filename))
-            dummyCoordinates = get_output(os.path.join(store_folder, filename))
+            data = get_output(os.path.join(store_folder, filename))
             
-    data = {'coordinates':dummyCoordinates}
     #return json of coordinates
     return jsonify(data)
-# get_output('/content/I2L-MeshNet_RELEASE/demo/input.jpg')
+
 app.run()
