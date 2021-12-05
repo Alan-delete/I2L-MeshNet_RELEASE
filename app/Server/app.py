@@ -167,7 +167,7 @@ def get_output(img_path):
             height = bboxs[0][3] - ymin
             bbox = [xmin , ymin, width, height]
         else:
-            bbox = [1.0, 1.0, original_img_width, orignal_img_height]
+            bbox = [1.0, 1.0, original_img_width, original_img_height]
         
         #bbox = [139.41, 102.25, 222.39, 241.57] # xmin, ymin, width, height
         bbox = process_bbox(bbox, original_img_width, original_img_height)
