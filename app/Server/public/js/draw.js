@@ -1,13 +1,20 @@
 import * as THREE from 'https://cdn.skypack.dev/three@0.133.1';
 import { OrbitControls } from 'https://cdn.skypack.dev/three@0.133.1/examples/jsm/controls/OrbitControls.js';
 
-const PORT = 5000
-const URL = '127.0.0.1'
+//const PORT = 5000
+//const URL = '127.0.0.1'
 var ngrok_url = window.location.href
 const canvas = document.getElementById("3dCanvas")
 
 
-
+document.getElementById("form-image").onchange = evt => {
+  let image = document.getElementById("form-image").files[0]
+  if (image) {
+    blah.src = URL.createObjectURL(image)
+    blah.width = blah.width< blah.height?blah.width:blah.height; 
+    blah.height = blah.width< blah.height?blah.width:blah.height; 
+  }
+}
 form.addEventListener("submit",function(event){
 
     event.preventDefault();
