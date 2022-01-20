@@ -63,6 +63,13 @@ start_capture.addEventListener('click',function(){
     //create new img file from img source
     let img = new Image();
     img.src = imgStr
+    
+    /*
+    blah.src = imageData
+    blah.width = blah.width< blah.height?blah.width:blah.height; 
+    blah.height = blah.width< blah.height?blah.width:blah.height; 
+    */
+
     //redraw image from the newly created file
     captured_image.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
 })
