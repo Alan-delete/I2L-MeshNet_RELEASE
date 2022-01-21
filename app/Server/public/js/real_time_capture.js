@@ -101,6 +101,17 @@ function newUpload() {
     }
 }
 
+
+//load src and convert to a File instance object
+//work for any type of src, not only image src.
+//return a promise that resolves with a File instance
+function srcToFile(src, fileName, mimeType){
+    return (fetch(src)
+        .then(function(res){return res.arrayBuffer();})
+        .then(function(buf){return new File([buf], fileName, {type:mimeType});})
+    );
+}
+
 function captureAndUpload() {
     //capture img from video
     captured_image.getContext('2d').drawImage(video,0,0,captured_image.width,captured_image.height);
@@ -114,8 +125,44 @@ function captureAndUpload() {
     //redraw image from the newly created file
     captured_image.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
 
-    let formData = new FormData()
-    formData.append('image',img)
+    srcToFile(img.src, "image.png", "image/png")
+      .then( imgFile => {
+        let formData = new FormData()
+        formData.append('image', imgFile)
+        console.log(imgFile)
+        return {
+          method: 'PUT',
+          body: formData,
+        }
+      })
+      .then( data => {
+        fetch(url,data).then(response => {
+          return response.json()
+        })
+      })
+      .then( res => {
+          console.log(res)
+
+          //update_skeleton(res['I2L_joints'], I2L_skeleton);
+          //update_skeleton(res['human36_joints'], human36_skeleton);
+          //update_skeleton(res['Sem_joints'], Sem_skeleton); 
+          //check whether have decided to stop uploading
+          if(!stopUpload){
+            newUpload()
+          }
+      })
+      .then(console.log("succeed here!"))
+      .catch(error => console.log(error))
+
+
+/*
+  let formData = new FormData()
+    formData.append('image', imgFile)
+
+    for (var key of formData.values()) {
+      console.log(key)
+    }
+
     let data = {
         method: 'PUT',
         body: formData,
@@ -136,4 +183,6 @@ function captureAndUpload() {
         }
     }).catch(error => console.log(error))
     return 
+
+*/
 }
