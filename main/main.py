@@ -28,7 +28,8 @@ sys.path.insert(0, osp.join('..', 'common'))
 from config import cfg
 from model import get_model
 from utils.preprocessing import process_bbox, generate_patch_image
-from utils.transforms import pixel2cam, cam2pixel
+from utils.transforms import pixel2cam, cam2pixel,transform_joint_to_other_db
+
 
 
 video_dir = "/content"
@@ -43,7 +44,8 @@ def fitness_video(video_dir, action_list):
         if (vr.isOpened() == False):
             print("Error openeing the file")
             continue
-        result  = {'name': action_name, 'joint_coords': []}
+        result  = {'name': action_name, 'human36_joint_coords': [],'smpl_joint_coords': [],
+'human36_joint_vector':[] ,'smpl_joint_vector':[]}
         while (vr.isOpened()):
             success, original_img  = vr.read()
             if success:
@@ -82,15 +84,24 @@ cfg.input_img_shape)
                 meta_info = {'bb2img_trans':None}
                 with torch.no_grad():
                     out = model(inputs,targets, meta_info, 'test' )
-                    result['joint_coords'].append(out['joint_coord_img'].cpu().numpy().tolist())
+                    smpl_joints = out['joint_coord_img'].cpu().numpy()[0]
+                    human36_joints = transform_joint_to_other_db(smpl_joints,cfg.smpl_joints_name ,
+cfg.joints_name)
+                    result['human36_joint_coords'].append(human36_joints.tolist())
+                    result['smpl_joint_coords'].append(smpl_joints.tolist())
+                    human36_joint_vector = [ (human36_joints[ edge[1]] - human36_joints[edge[0]]).tolist() for
+edge in cfg.skeleton]
+                    smpl_joint_vector = [ (smpl_joints[edge[1]] - smpl_joints[edge[0]]).tolist() for edge in
+cfg.smpl_skeleton]
+                    result['human36_joint_vector'].append(human36_joint_vector)
+                    result['smpl_joint_vector'].append(smpl_joint_vector)
             else:
                 break
         standard_fitness_action.append(result)
     #print(standard_fitness_action)
-    with open('./standard_actions','w') as f:
+    with open('./standard_joints.json','w') as f:
         json.dump(standard_fitness_action,f)
     vr.release()
-
 
 
 
