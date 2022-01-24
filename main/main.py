@@ -15,21 +15,86 @@ from importlib import reload
 # torch.hub.set_dir('../weights')
 
 # load pretrained YOLO5
-YOLO5_model = torch.hub.load('ultralytics/yolov5','yolov5m',force_reload = True, pretrained=True)
-YOLO5_model.cuda()
+#YOLO5_model = torch.hub.load('ultralytics/yolov5','yolov5m',force_reload = True, pretrained=True)
+#YOLO5_model.cuda()
 
 # need to import and reload utils, because there is also 'utils' package in YOLO being used.
-import utils
+#import utils
 sys.path.insert(0, osp.join('..', 'main'))
 sys.path.insert(0, osp.join('..', 'data'))
 sys.path.insert(0, osp.join('..', 'common'))
-reload(utils)
+#reload(utils)
 
 from config import cfg
 from model import get_model
 from utils.preprocessing import process_bbox, generate_patch_image
 from utils.transforms import pixel2cam, cam2pixel
 
+
+video_dir = "/content"
+action_list = ['Jump_Jack', 'Wide_Push_Up']
+import json
+def fitness_video(video_dir, action_list):
+    standard_fitness_action = []
+    for action_name in action_list:
+        video_path = osp.join(video_dir, '{}.mp4'.format(action_name))
+        vr = cv2.VideoCapture(video_path)
+
+        if (vr.isOpened() == False):
+            print("Error openeing the file")
+            continue
+        result  = {'name': action_name, 'joint_coords': []}
+        while (vr.isOpened()):
+            success, original_img  = vr.read()
+            if success:
+                # use frame
+
+
+                original_img_height, original_img_width = original_img.shape[:2]
+
+                # prepare bbox
+                # shape of (N = number of detected objects ,6)   xmin	ymin	xmax	ymax  confidence class
+                bboxs = YOLO5_model([original_img]).xyxy[0]
+                bboxs = bboxs [ bboxs[: , 5] ==0 ]
+                # the bbox is already sorted by confidence
+                bbox = []
+                if len(bboxs >0):
+                    xmin = bboxs[0][0]
+                    ymin = bboxs[0][1]
+                    width = bboxs[0][2] - xmin
+                    height = bboxs[0][3] - ymin
+                    bbox = [xmin , ymin, width, height]
+                else:
+                    bbox = [1.0, 1.0, original_img_width, orignal_img_height] 
+
+                #bbox = [139.41, 102.25, 222.39, 241.57] # xmin, ymin, width, height
+                bbox = process_bbox(bbox, original_img_width, original_img_height)
+                img, img2bb_trans, bb2img_trans = generate_patch_image(original_img, bbox, 1.0, 0.0, False,
+cfg.input_img_shape) 
+
+                #img = original_img
+                img = transform(img.astype(np.float32))/255
+                img = img.cuda()[None,:,:,:]
+
+                # forward
+                inputs = {'img': img}
+                targets = {}
+                meta_info = {'bb2img_trans':None}
+                with torch.no_grad():
+                    out = model(inputs,targets, meta_info, 'test' )
+                    result['joint_coords'].append(out['joint_coord_img'].cpu().numpy().tolist())
+            else:
+                break
+        standard_fitness_action.append(result)
+    #print(standard_fitness_action)
+    with open('./standard_actions','w') as f:
+        json.dump(standard_fitness_action,f)
+    vr.release()
+
+
+
+
+    
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -39,7 +104,7 @@ def parse_args():
     use_gpu = torch.cuda.is_available()
     if not use_gpu:
         assert 0, print("Lack of gpu")
-    
+    #torch.cuda.set_device(0)
     # test gpus
     if not args.gpu_ids:
         assert 0, print("Please set proper gpu ids")
@@ -86,18 +151,18 @@ original_img_height, original_img_width = original_img.shape[:2]
 
 # prepare bbox
 # shape of (N = number of detected objects ,6)   xmin	ymin	xmax	ymax  confidence class
-bboxs = YOLO5_model([img_path]).xyxy[0]
-bboxs = bboxs [ bboxs[: , 5] ==0 ]
+#bboxs = YOLO5_model([img_path]).xyxy[0]
+#bboxs = bboxs [ bboxs[: , 5] ==0 ]
 # the bbox is already sorted by confidence
 bbox = []
-if len(bboxs >0):
-    xmin = bboxs[0][0]
-    ymin = bboxs[0][1]
-    width = bboxs[0][2] - xmin
-    height = bboxs[0][3] - ymin
-    bbox = [xmin , ymin, width, height]
-else:
-    bbox = [1.0, 1.0, original_img_width, orignal_img_height] 
+#if len(bboxs >0):
+#    xmin = bboxs[0][0]
+#    ymin = bboxs[0][1]
+#    width = bboxs[0][2] - xmin
+#    height = bboxs[0][3] - ymin
+#    bbox = [xmin , ymin, width, height]
+#else:
+bbox = [1.0, 1.0, original_img_width, original_img_height] 
 
 #bbox = [139.41, 102.25, 222.39, 241.57] # xmin, ymin, width, height
 bbox = process_bbox(bbox, original_img_width, original_img_height)
@@ -113,5 +178,5 @@ targets = {}
 meta_info = {'bb2img_trans':None}
 with torch.no_grad():
     out = model(inputs,targets, meta_info, 'test' )
-print(out)
+#print(out)
 
