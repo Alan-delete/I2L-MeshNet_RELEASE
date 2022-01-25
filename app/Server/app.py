@@ -8,6 +8,7 @@ import json
 import os
 import sys
 import cv2
+from numpy.core.numeric import Infinity
 from werkzeug.utils import secure_filename
 import numpy as np
 import torch
@@ -73,8 +74,34 @@ def init_semGCN(test_epoch = 1):
     SemGCN_model.eval()
     return SemGCN_model
 
+def get_fitness_action():
+    json_file = os.path.join(app.static_folder, 'standard_joints.json')  
+    assert os.path.exists(json_file), 'Cannot find json file'
+    standard_action = ['INIT']
+    with open(json_file) as f:
+        standard_action = json.load(f)  
+    return standard_action
+
+def get_frame(user_action):
+    loss = Infinity
+    first_idx = 0
+    second_idx = 0
+    for action_idx, action in enumerate (standard_action) :
+        for frame_idx, action_per_frame in enumerate(action['human36_joint_coords']):
+            temp_loss = (user_action - action_per_frame).means()
+            if (temp_loss<loss):
+                loss = temp_loss
+                first_idx = action_idx
+                second_idx = frame_idx
+    result = {'name':standard_action[first_idx]['name'] ,'human36_joint_coords':standard_action[first_idx]['human36_joint_coords'][second_idx] }
+    return result
+                
+
+
+
 I2L_model = init_I2L()
 SemGCN_model = init_semGCN()
+standard_action = get_fitness_action()
 
 dummyCoordinates = [ 39.7642, 22.7078, 31.9892,
      
@@ -144,6 +171,11 @@ def home():
     #return render_template('index.html')
     print(app.static_folder)
     return send_from_directory(app.static_folder, 'index.html')
+
+
+@app.route("/getFitness",methods=['GET', 'POST'])
+def get_fitness_action():
+    return jsonify( standard_action )
 
 
 
