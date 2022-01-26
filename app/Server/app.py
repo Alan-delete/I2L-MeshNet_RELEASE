@@ -50,6 +50,83 @@ CORS(app)
 run_with_ngrok(app)   
 cudnn.benchmark = True
 
+
+class Action_reader():
+    def __init__(self, json_name = 'standard_joints.json'):
+        json_file = os.path.join(app.static_folder, json_name)  
+        assert os.path.exists(json_file), 'Cannot find json file'
+        standard_action = ['INIT']
+        with open(json_file) as f:
+            standard_action = json.load(f)  
+            self.standard_action = standard_action
+
+    def __getitem__(self, idx):
+        return self.standard_action[idx]
+
+    def __len__(self):
+        return len(self.standard_action)
+
+    def get_json(self):
+        return self.standard_action
+    
+    def get_loss(self, user_action, gt_action):
+        loss = 0
+        for key in user_action.keys():
+            loss += np.absolute( np.array(user_action[key]) - \
+            np.array( gt_action[key] ) ).mean()
+        return loss
+
+    def get_frame_idx(self, user_action):
+        #result = {'action_idx':None, 'frame_idx':None}
+        loss = Infinity
+        first_idx = 0
+        second_idx = 0
+        for action_idx, action in enumerate (self.standard_action) :
+            for frame_idx, action_per_frame in enumerate(action['data']):
+                temp_loss = self.get_loss(user_action, action_per_frame)
+                if (temp_loss<loss):
+                    loss = temp_loss
+                    first_idx = action_idx
+                    second_idx = frame_idx
+        return first_idx,second_idx
+
+    def get_action_list(self):
+        action_list = [ action['name'] for action in self.standard_action]
+        return action_list
+
+class Videos_reader():
+    def __init__(self,action_reader, video_dir = "Fitness_video"):
+        self.ar = action_reader
+        self.videos = []   
+        action_list = action_reader.get_action_list()
+        for action_name in action_list:
+            video = []
+            video_path = os.path.join(app.static_folder,video_dir,'{}.mp4'.format(action_name))
+            cap = cv2.VideoCapture(video_path)   
+            assert cap.isOpened(), 'Fail in opening video file'
+            
+            while (cap.isOpened()):
+                success, original_img  = cap.read()
+                if  success: 
+                    video.append(original_img)
+                else:
+                    break
+            self.videos.append(video)
+            cap.release() 
+
+    def __getitem__(self,idx):
+        return self.videos[idx]
+
+    def __len__(self):
+        return len(self.videos)
+
+    # user_action is assumed to be in form as {'human_joint_coords': , ...}
+    def get_frame(self, user_action):
+        action_idx, frame_idx = self.ar.get_frame_idx(user_action)
+        return self.videos[action_idx][frame_idx]
+
+
+
 def init_I2L(joint_num = 29,test_epoch = 12,mode = 'test'):
 
     # snapshot load
@@ -74,34 +151,11 @@ def init_semGCN(test_epoch = 1):
     SemGCN_model.eval()
     return SemGCN_model
 
-def get_fitness_action():
-    json_file = os.path.join(app.static_folder, 'standard_joints.json')  
-    assert os.path.exists(json_file), 'Cannot find json file'
-    standard_action = ['INIT']
-    with open(json_file) as f:
-        standard_action = json.load(f)  
-    return standard_action
-
-def get_frame(user_action):
-    loss = Infinity
-    first_idx = 0
-    second_idx = 0
-    for action_idx, action in enumerate (standard_action) :
-        for frame_idx, action_per_frame in enumerate(action['human36_joint_coords']):
-            temp_loss = (user_action - action_per_frame).means()
-            if (temp_loss<loss):
-                loss = temp_loss
-                first_idx = action_idx
-                second_idx = frame_idx
-    result = {'name':standard_action[first_idx]['name'] ,'human36_joint_coords':standard_action[first_idx]['human36_joint_coords'][second_idx] }
-    return result
-                
-
-
-
+ar = Action_reader()
+vr = Videos_reader(ar)
 I2L_model = init_I2L()
 SemGCN_model = init_semGCN()
-standard_action = get_fitness_action()
+#cv2.imwrite('./test.png',vr.get_frame(ar[1]['data'][20]))
 
 dummyCoordinates = [ 39.7642, 22.7078, 31.9892,
      
@@ -175,7 +229,7 @@ def home():
 
 @app.route("/getFitness",methods=['GET', 'POST'])
 def get_fitness_action():
-    return jsonify( standard_action )
+    return jsonify( ar.get_json() )
 
 
 
@@ -218,10 +272,10 @@ def get_output(img_path):
         human36_joints = transform_joint_to_other_db(I2L_joints.cpu().numpy(),cfg.smpl_joints_name , cfg.joints_name)
         Sem_joints = SemGCN_model(torch.from_numpy(human36_joints).cuda()[...,:2])[0]
 
-        return {'I2L_joints':I2L_joints.tolist(),\
-                'human36_joints':human36_joints.tolist(),\
-                'Sem_joints':Sem_joints.tolist() }
-        #return I2L_joints.tolist()
+        return {'smpl_joint_coords':I2L_joints.tolist(),\
+                'human36_joint_coords':human36_joints.tolist()}
+                #'Sem_joints':Sem_joints.tolist() }
+
     
 @app.route("/imageUpload", methods = ['PUT','POST'])
 def file_upload():
@@ -242,6 +296,8 @@ def file_upload():
             filename = secure_filename(file.filename)
             file.save(os.path.join(store_folder, filename))
             data = get_output(os.path.join(store_folder, filename))
+            x = vr.get_frame(data)
+            cv2.imwrite('./test.png' , x)
             
     #return json of coordinates
     return jsonify(data)
