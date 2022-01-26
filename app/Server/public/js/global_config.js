@@ -5,7 +5,19 @@
 const ngrok_url = window.location.href
 const url = `${ngrok_url}imageUpload`
 const canvas = document.getElementById("3dCanvas")
-
+/*
+//a promise
+async function myFetch() {
+  try {
+    let standard_fitness = await fetch(`${ngrok_url}getFitness`).json()
+    return standard_fitness
+  }
+  catch {
+    (e) =>
+      console.log(e)
+  }
+}
+*/
 // Skeletons need to be shared between different scripts, so we hava to declare them as global variables
 var I2L_skeleton, human36_skeleton,Sem_skeleton
 
