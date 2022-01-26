@@ -44,13 +44,15 @@ def fitness_video(video_dir, action_list):
         if (vr.isOpened() == False):
             print("Error openeing the file")
             continue
-        result  = {'name': action_name, 'human36_joint_coords': [],'smpl_joint_coords': [],
-'human36_joint_vector':[] ,'smpl_joint_vector':[]}
+        #result  = {'name': action_name, 'human36_joint_coords': [],'smpl_joint_coords': [], 'human36_joint_vector':[] ,'smpl_joint_vector':[]}
+        result = {'name': action_name,'data':[]}
         while (vr.isOpened()):
             success, original_img  = vr.read()
             if success:
                 # use frame
 
+                data_per_frame = {'human36_joint_coords': None,'smpl_joint_coords': None,\
+'human36_joint_vector':None ,'smpl_joint_vector':None}
 
                 original_img_height, original_img_width = original_img.shape[:2]
 
@@ -87,14 +89,15 @@ cfg.input_img_shape)
                     smpl_joints = out['joint_coord_img'].cpu().numpy()[0]
                     human36_joints = transform_joint_to_other_db(smpl_joints,cfg.smpl_joints_name ,
 cfg.joints_name)
-                    result['human36_joint_coords'].append(human36_joints.tolist())
-                    result['smpl_joint_coords'].append(smpl_joints.tolist())
+                    data_per_frame['human36_joint_coords'].append(human36_joints.tolist())
+                    data_per_frame['smpl_joint_coords'].append(smpl_joints.tolist())
                     human36_joint_vector = [ (human36_joints[ edge[1]] - human36_joints[edge[0]]).tolist() for
 edge in cfg.skeleton]
                     smpl_joint_vector = [ (smpl_joints[edge[1]] - smpl_joints[edge[0]]).tolist() for edge in
 cfg.smpl_skeleton]
-                    result['human36_joint_vector'].append(human36_joint_vector)
-                    result['smpl_joint_vector'].append(smpl_joint_vector)
+                    data_per_frame['human36_joint_vector'].append(human36_joint_vector)
+                    data_per_frame['smpl_joint_vector'].append(smpl_joint_vector)
+                    result['data'].append(data_per_frame)
             else:
                 break
         standard_fitness_action.append(result)
