@@ -72,6 +72,8 @@ class Action_reader():
     def get_loss(self, user_action, gt_action):
         loss = 0
         for key in user_action.keys():
+            if not key in gt_action.keys():
+                continue
             loss += np.absolute( np.array(user_action[key]) - \
             np.array( gt_action[key] ) ).mean()
         return loss
@@ -273,8 +275,8 @@ def get_output(img_path):
         Sem_joints = SemGCN_model(torch.from_numpy(human36_joints).cuda()[...,:2])[0]
 
         return {'smpl_joint_coords':I2L_joints.tolist(),\
-                'human36_joint_coords':human36_joints.tolist()}
-                #'Sem_joints':Sem_joints.tolist() }
+                'human36_joint_coords':human36_joints.tolist(),\
+                'Sem_joints':Sem_joints.tolist() }
 
     
 @app.route("/imageUpload", methods = ['PUT','POST'])
