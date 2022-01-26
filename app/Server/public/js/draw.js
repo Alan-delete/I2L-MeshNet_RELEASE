@@ -32,8 +32,8 @@ form.addEventListener("submit",function(event){
         .then(
             data => {
             console.log(data);
-            update_skeleton(data['I2L_joints'], I2L_skeleton);
-            update_skeleton(data['human36_joints'], human36_skeleton);
+            update_skeleton(data['smpl_joint_coords'], I2L_skeleton);
+            update_skeleton(data['human36_joint_coords'], human36_skeleton);
             update_skeleton(data['Sem_joints'], Sem_skeleton); 
                 }
             )
