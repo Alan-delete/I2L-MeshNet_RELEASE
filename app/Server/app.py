@@ -18,7 +18,7 @@ import torch.backends.cudnn as cudnn
 from importlib import reload
 
 UPLOAD_FOLDER = 'uploads'
-ALLOWED_EXTENSIONS = {'png','jpg','jpeg'}
+ALLOWED_EXTENSIONS = {'png','jpg','jpeg','jfif'}
 
 # load YOLO5
 YOLO5_model = torch.hub.load('ultralytics/yolov5','yolov5m', pretrained=True)
