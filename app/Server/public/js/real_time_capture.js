@@ -136,10 +136,11 @@ function captureAndUpload() {
         }
       })
       .then( data => {
-        fetch(url,data).then(response => {
+        return fetch(url,data)
+      })
+      .then(response => {
           return response.json()
         })
-      })
       .then( res => {
           console.log(res)
 
