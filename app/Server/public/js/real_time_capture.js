@@ -2,7 +2,7 @@ const INTERVAL = 500
 const d = new Date()
 let time = null
 let stopUpload = true
-
+import { update_skeleton} from './draw.js'
 
 let start_camera = document.querySelector("#start-camera")
 let video = document.querySelector("#video")
@@ -179,8 +179,8 @@ function captureAndUpload() {
       .then( res => {
           console.log(res)
 
-          //update_skeleton(res['I2L_joints'], I2L_skeleton);
-          //update_skeleton(res['human36_joints'], human36_skeleton);
+          update_skeleton(res['smpl_joint_coords'], I2L_skeleton);
+          update_skeleton(res['human36_joint_coords'], human36_skeleton);
           //update_skeleton(res['Sem_joints'], Sem_skeleton); 
           //check whether have decided to stop uploading
           if(!stopUpload){
