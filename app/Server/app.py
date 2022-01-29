@@ -55,10 +55,11 @@ class Action_reader():
     def __init__(self, json_name = 'standard_joints.json'):
         json_file = os.path.join(app.static_folder, json_name)  
         assert os.path.exists(json_file), 'Cannot find json file'
-        standard_action = ['INIT']
+        self.standard_action = []
         with open(json_file) as f:
             standard_action = json.load(f)  
             self.standard_action = standard_action
+        self.action_list = [ action['name'] for action in self.standard_action]
 
     def __getitem__(self, idx):
         return self.standard_action[idx]
@@ -77,7 +78,8 @@ class Action_reader():
             loss += np.absolute( np.array(user_action[key]) - \
             np.array( gt_action[key] ) ).mean()
         return loss
-
+    
+    # user_action is assumed to be in form as {'human_joint_coords': , ...}
     def get_frame_idx(self, user_action):
         #result = {'action_idx':None, 'frame_idx':None}
         loss = Infinity
@@ -93,15 +95,13 @@ class Action_reader():
         return first_idx,second_idx
 
     def get_action_list(self):
-        action_list = [ action['name'] for action in self.standard_action]
-        return action_list
+        return self.action_list
 
 class Videos_reader():
-    def __init__(self,action_reader, video_dir = "Fitness_video"):
-        self.ar = action_reader
+    def __init__(self, action_list, video_dir = "Fitness_video"):
         self.videos = []   
-        action_list = action_reader.get_action_list()
-        for action_name in action_list:
+        self.action_list = action_list
+        for action_name in self.action_list:
             video = []
             video_path = os.path.join(app.static_folder,video_dir,'{}.mp4'.format(action_name))
             cap = cv2.VideoCapture(video_path)   
@@ -122,10 +122,9 @@ class Videos_reader():
     def __len__(self):
         return len(self.videos)
 
-    # user_action is assumed to be in form as {'human_joint_coords': , ...}
-    def get_frame(self, user_action):
-        action_idx, frame_idx = self.ar.get_frame_idx(user_action)
-        return self.videos[action_idx][frame_idx]
+    # return name and frame data
+    def get_frame(self, action_idx,frame_idx):
+        return self.action_list[action_idx], self.videos[action_idx][frame_idx]
 
 
 
@@ -154,9 +153,10 @@ def init_semGCN(test_epoch = 1):
     return SemGCN_model
 
 ar = Action_reader()
-vr = Videos_reader(ar)
+vr = Videos_reader(ar.get_action_list())
 I2L_model = init_I2L()
 SemGCN_model = init_semGCN()
+
 #cv2.imwrite('./test.png',vr.get_frame(ar[1]['data'][20]))
 
 
@@ -240,7 +240,8 @@ def file_upload():
             filename = secure_filename(file.filename)
             file.save(os.path.join(store_folder, filename))
             data = get_output(os.path.join(store_folder, filename))
-            match_frame = vr.get_frame(data)
+            action_idx, frame_idx = ar.get_frame_idx(data)
+            match_action, match_frame = vr.get_frame(action_idx, frame_idx)
             cv2.imwrite(os.path.join(app.static_folder, 'match_frame.png') , match_frame)
             
     #return json of coordinates
