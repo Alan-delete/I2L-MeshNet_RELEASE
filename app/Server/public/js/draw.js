@@ -1,5 +1,6 @@
 import * as THREE from 'https://cdn.skypack.dev/three@0.133.1';
 import { OrbitControls } from 'https://cdn.skypack.dev/three@0.133.1/examples/jsm/controls/OrbitControls.js';
+export { update_skeleton}
 
 document.getElementById("form-image").onchange = evt => {
   let image = document.getElementById("form-image").files[0]
