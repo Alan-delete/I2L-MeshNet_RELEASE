@@ -159,64 +159,6 @@ I2L_model = init_I2L()
 SemGCN_model = init_semGCN()
 #cv2.imwrite('./test.png',vr.get_frame(ar[1]['data'][20]))
 
-dummyCoordinates = [ 39.7642, 22.7078, 31.9892,
-     
-    40.6116, 26.0905, 34.2193,
-     
-    36.0548, 25.0538, 32.6827,
-     
-    41.1295, 18.4470, 30.9866,
-     
-    43.6070, 38.7190, 29.3077,
-     
-    27.6858, 37.2311, 29.8864,
-     
-    43.4302, 16.8571, 27.4887,
-     
-    41.2941, 52.8330, 35.5459,
-     
-    19.6125, 47.5865, 37.6749,
-     
-    44.3492, 16.9762, 25.8378,
-     
-    42.8460, 55.7746, 32.3185,
-     
-    17.7097, 50.6393, 34.5038,
-     
-    47.5938, 12.3236, 20.6534,
-     
-    48.9126, 14.3306, 23.9226,
-     
-    43.3275, 13.3207, 22.2242,
-     
-    48.8497, 12.5166, 18.4363,
-     
-    52.3104, 14.6594, 24.7424,
-     
-    40.1984, 12.6481, 20.9878,
-     
-    53.4274, 18.9680, 31.7843,
-     
-    31.0148, 15.4037, 24.1125,
-     
-    53.2553, 26.5973, 26.6768,
-     
-    32.6980, 23.6892, 20.0303,
-     
-    53.2801, 28.8286, 24.4359,
-     
-    33.6501, 26.5843, 17.9701,
-     
-    50.3077, 12.9904, 14.9635,
-     
-    51.4026, 11.1491, 15.3668,
-     
-    48.9452, 10.8628, 15.0181,
-     
-    51.7383,  9.9970, 18.3521,
-     
-    46.2133,  9.2510, 16.5609,
-     ]
 
 def allowed_file(filename):
     return '.' in filename and \
@@ -298,8 +240,8 @@ def file_upload():
             filename = secure_filename(file.filename)
             file.save(os.path.join(store_folder, filename))
             data = get_output(os.path.join(store_folder, filename))
-            x = vr.get_frame(data)
-            cv2.imwrite('./test.png' , x)
+            match_frame = vr.get_frame(data)
+            cv2.imwrite(os.path.join(app.static_folder, 'match_frame.png') , match_frame)
             
     #return json of coordinates
     return jsonify(data)
