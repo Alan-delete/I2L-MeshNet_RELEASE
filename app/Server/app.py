@@ -56,6 +56,7 @@ class Action_reader():
         json_file = os.path.join(app.static_folder, json_name)  
         assert os.path.exists(json_file), 'Cannot find json file'
         self.standard_action = []
+        self.user_action_idx = None 
         with open(json_file) as f:
             standard_action = json.load(f)  
             self.standard_action = standard_action
@@ -220,7 +221,8 @@ def get_output(img_path):
                 'human36_joint_coords':human36_joints.tolist(),\
                 'Sem_joints':Sem_joints.tolist() }
 
-    
+# as tested on my laptop, currently the speed of file upload and network process is nearly 1 frame per second.   
+# also returns match_action name, the action estimate will be executed on front end, since it's little calculation and every user has their own different data record.
 @app.route("/imageUpload", methods = ['PUT','POST'])
 def file_upload():
     # print("file uploaded, processing")
@@ -242,6 +244,7 @@ def file_upload():
             data = get_output(os.path.join(store_folder, filename))
             action_idx, frame_idx = ar.get_frame_idx(data)
             match_action, match_frame = vr.get_frame(action_idx, frame_idx)
+            data['action_name'] = match_action
             cv2.imwrite(os.path.join(app.static_folder, 'match_frame.png') , match_frame)
             
     #return json of coordinates
