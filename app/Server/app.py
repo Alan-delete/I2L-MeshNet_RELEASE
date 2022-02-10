@@ -221,7 +221,7 @@ def get_output(img_path):
                 'human36_joint_coords':human36_joints.tolist(),\
                 'Sem_joints':Sem_joints.tolist() }
 
-# as tested on my laptop, currently the speed of file upload and network process is nearly 1 frame per second.   
+# as tested on my laptop, currently the speed of file upload and neural network process is nearly 1 frame per second. For pure neural network process, 19.84 seconds for 100 image   
 # also returns match_action name, the action estimate will be executed on front end, since it's little calculation and every user has their own different data record.
 @app.route("/imageUpload", methods = ['PUT','POST'])
 def file_upload():
