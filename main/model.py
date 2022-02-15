@@ -1,11 +1,14 @@
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
+import torchvision.transforms as transforms 
 from nets.resnet import ResNetBackbone
 from nets.densenet import DenseNetBackbone
 from nets.module import PoseNet
-from nets.loss import CoordLoss, ParamLoss, NormalVectorLoss, EdgeLengthLoss
+from nets.SemGCN.export import SemGCN
+from nets.loss import CoordLoss, BoneVectorLoss, EdgeLengthLoss
 from config import cfg
+from nets.layer import make_conv_layers, make_deconv_layers, make_conv1d_layers
 #from contextlib import nullcontext
 import math
 
@@ -16,8 +19,11 @@ class Model_2Dpose(nn.Module):
         self.pose_net = pose_net
         
         self.coord_loss = CoordLoss()
+        self.bone_vec_loss = BoneVectorLoss()
         self.trainable_modules = [self.pose_backbone, self.pose_net]
-   
+        
+
+
     def make_gaussian_heatmap(self, joint_coord_img):
         x = torch.arange(cfg.output_hm_shape[2])
         y = torch.arange(cfg.output_hm_shape[1])
@@ -30,33 +36,49 @@ class Model_2Dpose(nn.Module):
         return heatmap
     
     def forward(self, inputs, targets, meta_info, mode = 'test'):
-
-        #if cfg.stage == 'lixel':
-        #    cm = nullcontext()
-        #else:
-        cm = torch.no_grad()
-        
-        with cm:
-            # posenet forward
+        self.pose_backbone.eval()
+        with torch.no_grad():
             shared_img_feat, pose_img_feat = self.pose_backbone(inputs['img'])
+        # shape of image feature of resnet is [N, 2048, 13, 20]
         joint_coord_img = self.pose_net(pose_img_feat)
-        #print('joint_coord_img is:',joint_coord_img)
-        # test output
+        
         if (mode=='train'):
             loss = {}
             loss['joint_orig'] = self.coord_loss(joint_coord_img, targets['orig_joint_img'], valid = meta_info['orig_joint_trunc'] ,is_3D = meta_info['is_3D'])
+            loss['bone_vector'] = self.bone_vec_loss(joint_coord_img, targets['orig_joint_img'])
+#            for k,v in loss.items():
+#                if torch.any(torch.isnan(v)):
+#                    print("current img feat is:", pose_img_feat)
+#                    print("current deconv feat is:", self.pose_net.deconv(pose_img_feat))
+#                   
+#                    print("prediction is:",joint_coord_img ) 
+#                    print("resnet NAN layers are")
+#                    for name, p in self.pose_backbone.named_parameters():
+#                        if (torch.any(torch.isnan(p))):
+#                            print(name)
+#                   
+#                    print("posenet NAN layers are")
+#                    for name, p in self.pose_net.named_parameters():
+#                        if (torch.any(torch.isnan(p))):
+#                            print(name)
+#                     
+#                    assert False, 'loss is nan here'
+#
             return loss
         else:
             out = {}
             out['joint_coord_img'] = joint_coord_img
             out['bb2img_trans'] = meta_info['bb2img_trans']
+            out['img_feat'] = pose_img_feat 
             return out
 
 def init_weights(m):
     if type(m) == nn.ConvTranspose2d:
-        nn.init.normal_(m.weight,std=0.001)
+        #nn.init.normal_(m.weight,std=0.001)
+        nn.init.kaiming_normal_(m.weight,mode = 'fan_out', nonlinearity = 'relu')
     elif type(m) == nn.Conv2d:
-        nn.init.normal_(m.weight,std=0.001)
+        #nn.init.normal_(m.weight,std=0.001)
+        nn.init.kaiming_normal_(m.weight,mode = 'fan_out', nonlinearity = 'relu')
         nn.init.constant_(m.bias, 0)
     elif type(m) == nn.BatchNorm2d:
         nn.init.constant_(m.weight,1)

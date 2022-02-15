@@ -2,13 +2,22 @@ import os
 import os.path as osp
 import sys
 import numpy as np
-
+import torch 
+import random
+# for easier debuggingi and reproducibility
+seed = 7
+torch.manual_seed(seed)
+torch.cuda.manual_seed_all(seed)
+random.seed(seed)
+np.random.seed(seed)
+torch.backends.cudnn.deterministic = True
+#torch.use_deterministic_algorithms(True)
 class Config:
     
     ## dataset
     # MuCo, Human36M, MSCOCO, PW3D, FreiHAND
     trainset_3d = ['Human36M']#MuCo, Human36M, FreiHAND
-    trainset_2d = ['MSCOCO'] # MSCOCO
+    trainset_2d = []#['MSCOCO'] # MSCOCO
     testset = 'Human36M'# Human36M, MSCOCO, PW3D, FreiHAND
 
     ## model setting
@@ -33,11 +42,11 @@ class Config:
 
 
     ## training config
-    lr_dec_epoch = [10,12] if 'FreiHAND' not in trainset_3d + trainset_2d + [testset] else [17,21]
-    end_epoch = 5 if 'FreiHAND' not in trainset_3d + trainset_2d + [testset] else 25
+    lr_dec_epoch = [3,5] if 'FreiHAND' not in trainset_3d + trainset_2d + [testset] else [17,21]
+    end_epoch = 1 if 'FreiHAND' not in trainset_3d + trainset_2d + [testset] else 25
     lr = 1e-4
     lr_dec_factor = 10
-    train_batch_size = 8
+    train_batch_size = 16 
     normal_loss_weight = 0.1
 
     ## testing config
@@ -48,7 +57,7 @@ class Config:
     num_thread = 10
     gpu_ids = '0'
     num_gpus = 1
-    stage = '2D' # 2D ,3D
+    stage = 'lixel' # 2D ,3D
     continue_train = True#False
     
     ## directory

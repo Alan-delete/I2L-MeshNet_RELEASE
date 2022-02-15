@@ -3,7 +3,7 @@ import os.path as osp
 import torch
 import torch.nn as nn
 #import torch.backends.cudnn as cudnn
-
+from nets.layer import make_conv_layers, make_conv1d_layers, make_deconv_layers
 from nets.SemGCN.models.sem_graph_conv import SemGraphConv
 from nets.SemGCN.models.graph_non_local import GraphNonLocal
 from nets.SemGCN.common.graph_utils import adj_mx_from_edges
@@ -96,6 +96,7 @@ class SemGCN(nn.Module):
         self.gconv_output = SemGraphConv(hid_dim, coords_dim[1], adj)
 
     def forward(self, x):
+            # here we could test the effect of order by which the convolution and flatten are implemnted
         out = self.gconv_input(x)
         out = self.gconv_layers(out)
         out = self.gconv_output(out)

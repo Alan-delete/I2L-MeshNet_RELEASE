@@ -4,6 +4,23 @@ from torch.nn import functional as F
 import numpy as np
 from config import cfg
 
+class BoneVectorLoss(nn.Module):
+    def __init__(self):
+        super(BoneVectorLoss, self).__init__()
+
+    def forward(self, coord_out, coord_gt):
+       # init loss as zero 
+       loss = torch.tensor(0.0, requires_grad = True) 
+       for bone in cfg.skeleton:
+            vec_diff = torch.norm( \
+  ( coord_out[:, bone[1]] - coord_out[:, bone[0]] ) - \
+  ( coord_gt[:, bone[1]]  - coord_gt[:, bone[0]]  ) , \
+    dim = 1 )
+
+            loss  = loss+ vec_diff.mean()
+       loss = loss/ len(cfg.skeleton)
+       return loss
+
 class CoordLoss(nn.Module):
     def __init__(self):
         super(CoordLoss, self).__init__()
