@@ -1,4 +1,5 @@
 import torch
+import os
 import argparse
 from tqdm import tqdm
 import numpy as np
@@ -8,9 +9,9 @@ from base import Tester
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--gpu', type=str, dest='gpu_ids')
-    parser.add_argument('--stage', type=str, dest='stage')
-    parser.add_argument('--test_epoch', type=str, dest='test_epoch')
+    parser.add_argument('--test_epoch', default = '12', type=str, dest='test_epoch')
+    parser.add_argument('--gpu', type=str,default='0', dest='gpu_ids')
+    parser.add_argument('--stage', type=str,default ='lixel', dest='stage')
     args = parser.parse_args()
 
     if not args.gpu_ids:
@@ -31,7 +32,7 @@ def parse_args():
 def main():
 
     args = parse_args()
-    cfg.set_args(args.gpu_ids, args.stage)
+    cfg.set_args(args.gpu_ids, args.stage )
     cudnn.benchmark = True
     print('Stage: ' + args.stage)
 
@@ -39,21 +40,26 @@ def main():
     tester._make_batch_generator()
     tester._make_model()
     
+    #state = {'epoch':10, 'network':tester.model.state_dict()}
+    #file_path = os.path.join(cfg.model_dir, 'snapshot_demo.pth.tar')
+    #torch.save(state, file_path)    
+    #print("successfully saved")
+ 
     eval_result = {}
     cur_sample_idx = 0
     for itr, (inputs, targets, meta_info) in enumerate(tqdm(tester.batch_generator)):
         
         # forward
         with torch.no_grad():
-            out = tester.model(inputs, targets, meta_info, 'test')
+            out = tester.model(inputs, targets, meta_info, 'test' )
        
         # save output
         out = {k: v.cpu().numpy() for k,v in out.items()}
         for k,v in out.items(): batch_size = out[k].shape[0]
-        out = [{k: v[bid] for k,v in out.items()} for bid in range(batch_size)]
-
+        out = [{k: v[bid]  for k,v in out.items()}for bid in range(batch_size)]
         # evaluate
         cur_eval_result = tester._evaluate(out, cur_sample_idx)
+        #break
         for k,v in cur_eval_result.items():
             if k in eval_result: eval_result[k] += v
             else: eval_result[k] = v

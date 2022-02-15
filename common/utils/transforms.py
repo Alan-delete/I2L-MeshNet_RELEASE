@@ -55,5 +55,11 @@ def transform_joint_to_other_db(src_joint, src_name, dst_name):
         if name in dst_name:
             dst_idx = dst_name.index(name)
             new_joint[dst_idx] = src_joint[src_idx]
-
+    # it means from smpl to human36m, which will
+    # cause 'head'joint information loss 
+    if ('Head_top'in dst_name and 'Head' in src_name):
+        dst_idx = dst_name.index('Head_top')
+        L_eye_idx  = src_name.index('L_Eye') 
+        R_eye_idx  = src_name.index('R_Eye') 
+        new_joint[dst_idx] = (src_joint[L_eye_idx] + src_joint[R_eye_idx])/2
     return new_joint

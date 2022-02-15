@@ -11,6 +11,7 @@ from timer import Timer
 from logger import colorlogger
 from torch.nn.parallel.data_parallel import DataParallel
 from config import cfg
+from nets.loss import CoordLoss
 from model import get_model
 from dataset import MultipleDatasets
 
@@ -51,7 +52,7 @@ class Trainer(Base):
     def get_optimizer(self, model):
         total_params = []
         for module in model.module.trainable_modules:
-            total_params.append(module.parameters())
+            total_params += list(module.parameters())
         optimizer = torch.optim.Adam(total_params, lr=cfg.lr)
         return optimizer
 
@@ -102,17 +103,17 @@ class Trainer(Base):
 
         
         if len(trainset3d_loader) > 0 and len(trainset2d_loader) > 0:
-            self.vertex_num = trainset3d_loader[0].vertex_num
+            #self.vertex_num = trainset3d_loader[0].vertex_num
             self.joint_num = trainset3d_loader[0].joint_num
             trainset3d_loader = MultipleDatasets(trainset3d_loader, make_same_len=False)
             trainset2d_loader = MultipleDatasets(trainset2d_loader, make_same_len=False)
             trainset_loader = MultipleDatasets([trainset3d_loader, trainset2d_loader], make_same_len=True)
         elif len(trainset3d_loader) > 0:
-            self.vertex_num = trainset3d_loader[0].vertex_num
+            #self.vertex_num = trainset3d_loader[0].vertex_num
             self.joint_num = trainset3d_loader[0].joint_num
             trainset_loader = MultipleDatasets(trainset3d_loader, make_same_len=False)
         elif len(trainset2d_loader) > 0:
-            self.vertex_num = trainset2d_loader[0].vertex_num
+            #self.vertex_num = trainset2d_loader[0].vertex_num
             self.joint_num = trainset2d_loader[0].joint_num
             trainset_loader = MultipleDatasets(trainset2d_loader, make_same_len=False)
         else:
@@ -124,7 +125,7 @@ class Trainer(Base):
     def _make_model(self):
         # prepare network
         self.logger.info("Creating graph and optimizer...")
-        model = get_model(self.vertex_num, self.joint_num, 'train')
+        model = get_model(self.joint_num, 'train')
         model = DataParallel(model).cuda()
         optimizer = self.get_optimizer(model)
         if cfg.continue_train:
@@ -136,6 +137,7 @@ class Trainer(Base):
         self.start_epoch = start_epoch
         self.model = model
         self.optimizer = optimizer
+        self.criteria = CoordLoss()
 
 class Tester(Base):
     def __init__(self, test_epoch):
@@ -149,18 +151,19 @@ class Tester(Base):
         batch_generator = DataLoader(dataset=testset_loader, batch_size=cfg.num_gpus*cfg.test_batch_size, shuffle=False, num_workers=cfg.num_thread, pin_memory=True)
         
         self.testset = testset_loader
-        self.vertex_num = testset_loader.vertex_num
+        #self.vertex_num = testset_loader.vertex_num
         self.joint_num = testset_loader.joint_num
         self.batch_generator = batch_generator
 
     def _make_model(self):
-        model_path = os.path.join(cfg.model_dir, 'snapshot_%d.pth.tar' % self.test_epoch)
+        #model_path = os.path.join(cfg.model_dir, 'snapshot_%d.pth.tar' % self.test_epoch)
+        model_path = os.path.join(cfg.model_dir, 'snapshot_demo.pth.tar' )
         assert os.path.exists(model_path), 'Cannot find model at ' + model_path
         self.logger.info('Load checkpoint from {}'.format(model_path))
         
         # prepare network
         self.logger.info("Creating graph...")
-        model = get_model(self.vertex_num, self.joint_num, 'test')
+        model = get_model( self.joint_num, 'test')
         model = DataParallel(model).cuda()
         ckpt = torch.load(model_path)
         model.load_state_dict(ckpt['network'], strict=False)

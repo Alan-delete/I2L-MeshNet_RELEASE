@@ -6,9 +6,9 @@ import torch.backends.cudnn as cudnn
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--gpu', type=str, dest='gpu_ids')
-    parser.add_argument('--stage', type=str, dest='stage')
-    parser.add_argument('--continue', dest='continue_train', action='store_true')
+    parser.add_argument('--gpu', type=str,default='0', dest='gpu_ids')
+    parser.add_argument('--stage', type=str,default ='lixel', dest='stage')
+    parser.add_argument('--continue',default = False, dest='continue_train', action='store_true')
     args = parser.parse_args()
 
     if not args.gpu_ids:
@@ -46,12 +46,12 @@ def main():
         for itr, (inputs, targets, meta_info) in enumerate(trainer.batch_generator):
             trainer.read_timer.toc()
             trainer.gpu_timer.tic()
-
             # forward
             trainer.optimizer.zero_grad()
             loss = trainer.model(inputs, targets, meta_info, 'train')
+            #loss = trainer.criteria(outputs['joint_coord_img'], targets['orig_joint_img'], meta_info['orig_joint_valid'], meta_info['is_3D'])
+            #loss = trainer.model(inputs, targets, meta_info, 'train')
             loss = {k:loss[k].mean() for k in loss}
-
             # backward
             sum(loss[k] for k in loss).backward()
             trainer.optimizer.step()

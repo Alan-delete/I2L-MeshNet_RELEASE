@@ -151,4 +151,12 @@ def gen_trans_from_patch_cv(c_x, c_y, src_width, src_height, dst_width, dst_heig
 
     trans = trans.astype(np.float32)
     return trans
+# joints is in shape( ,3) or ( ,2), joints_name is
+# list of string
+def root_joint_normalize(joints, joints_name,root= 'Pelvis'):    
+    root_idx = joints_name.index(root)
+    root_rela_coor = joints - joints[root_idx,None,:]
+    _range = np.max(abs(joints))
+    return root_rela_coor / _range
+
 
