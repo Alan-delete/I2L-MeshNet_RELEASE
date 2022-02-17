@@ -84,16 +84,17 @@ class Action_reader():
     def get_frame_idx(self, user_action):
         #result = {'action_idx':None, 'frame_idx':None}
         loss = Infinity
-        first_idx = 0
-        second_idx = 0
+        threshold = Infinity
+        first_idx = -1
+        second_idx = -1
         for action_idx, action in enumerate (self.standard_action) :
             for frame_idx, action_per_frame in enumerate(action['data']):
                 temp_loss = self.get_loss(user_action, action_per_frame)
-                if (temp_loss<loss):
+                if temp_loss<loss and temp_loss < threshold:
                     loss = temp_loss
                     first_idx = action_idx
                     second_idx = frame_idx
-        return first_idx,second_idx
+        return first_idx,second_idx, loss
 
     def get_action_list(self):
         return self.action_list
@@ -242,10 +243,15 @@ def file_upload():
             filename = secure_filename(file.filename)
             file.save(os.path.join(store_folder, filename))
             data = get_output(os.path.join(store_folder, filename))
-            action_idx, frame_idx = ar.get_frame_idx(data)
-            match_action, match_frame = vr.get_frame(action_idx, frame_idx)
-            data['action_name'] = match_action
-            cv2.imwrite(os.path.join(app.static_folder, 'match_frame.png') , match_frame)
+            action_idx, frame_idx, loss = ar.get_frame_idx(data)
+            if action_idx == -1:
+                data['action_name'] = 'Loss exceeds threshold!'
+                data['loss'] = loss             
+            else:
+                match_action, match_frame = vr.get_frame(action_idx, frame_idx)
+                data['action_name'] = match_action
+                data['loss'] = loss
+                cv2.imwrite(os.path.join(app.static_folder, 'match_frame.png') , match_frame)
             
     #return json of coordinates
     return jsonify(data)
