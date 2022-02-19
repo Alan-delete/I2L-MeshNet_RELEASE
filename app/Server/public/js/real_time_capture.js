@@ -94,8 +94,8 @@ function stopContinuousUpload(){
 }
 
 function newUpload() {
-    
-    setTimeout(captureAndUpload, INTERVAL )
+    setTimeout(test_only, INTERVAL )
+    //setTimeout(captureAndUpload, INTERVAL )
     
     /*
     if (time == null){
@@ -109,6 +109,64 @@ function newUpload() {
     }
     */
     
+}
+
+// use static image to simulate real-time process 
+function test_only() {
+  let image = document.getElementById("form-image").files[0]
+  let formdata = new FormData()
+  formdata.append('image', image)
+  let data = {
+    method: 'PUT',
+    body: formdata
+  }
+  fetch(url, data).then(response => {
+    return response.json()
+  })
+    .then(res => {
+      console.log(res)
+      update_skeleton(res['smpl_joint_coords'], I2L_skeleton);
+
+        if (res['action_name'] != 'Loss exceeds threshold!') {
+          action_record.push({
+            'action_name': res['action_name'],
+            'loss': res['loss']
+          })                
+        }
+
+
+          //update_skeleton(res['Sem_joints'], Sem_skeleton); 
+          // action recognition
+        if (action_record.length > 10) {
+          let dict = new Object()
+          let max_value = 0
+          let predicted_action = ''
+            for (let i = 2; i < action_record.length-2; i++) {
+              if (action_record[i]['action_name'] in dict) {
+                dict[action_record[i]['action_name']] += 1
+                if (dict[action_record[i]['action_name']] > max_value) {
+                  max_value = dict[action_record[i]['action_name']]
+                  predicted_action = action_record[i]['action_name']
+                }
+              }
+              else {
+                dict[action_record[i]['action_name']] = 1
+                  if (dict[action_record[i]['action_name']] > max_value) {
+                  max_value = dict[action_record[i]['action_name']]
+                  predicted_action = action_record[i]['action_name']
+                }
+              }
+            }
+            console.log ('predicted action is:'+ predicted_action)
+
+          }
+      if (!stopUpload)
+        newUpload()
+    })
+    .then(console.log("test succeed"))
+    .catch(err => console.log(err))
+
+  
 }
 
 
@@ -142,6 +200,10 @@ function dataURItoBlob(dataURI) {
 
 }
 
+
+
+
+
 function captureAndUpload() {
     //capture img from video
     captured_image.getContext('2d').drawImage(video,0,0,captured_image.width,captured_image.height);
@@ -173,8 +235,42 @@ function captureAndUpload() {
 
           update_skeleton(res['smpl_joint_coords'], I2L_skeleton);
           update_skeleton(res['human36_joint_coords'], human36_skeleton);
-          action_record.append(res['action_name'])
+
+
+        if (action_record[0]['action_name'] != 'Loss exceeds threshold!') {
+          action_record.push({
+            'action_name': res['action_name'],
+            'loss': res['loss']
+          })                
+        }
+
+
           //update_skeleton(res['Sem_joints'], Sem_skeleton); 
+          // action recognition
+        if (action_record.length > 10) {
+          let dict = new Object()
+          let max_value = 0
+          let predicted_action = ''
+            for (let i = 2; i < action_record.length-2; i++) {
+              if (action_record[i]['action_name'] in dict) {
+                dict[action_record[i]['action_name']] += 1
+                if (dict[action_record[i]['action_name']] > max_value) {
+                  max_value = dict[action_record[i]['action_name']]
+                  predicted_action = action_record[i]['action_name']
+                }
+              }
+              else {
+                dict[action_record[i]['action_name']] = 1
+                  if (dict[action_record[i]['action_name']] > max_value) {
+                  max_value = dict[action_record[i]['action_name']]
+                  predicted_action = action_record[i]['action_name']
+                }
+              }
+            }
+            console.log ('predicted action is:'+ predicted_action)
+
+          }
+
           //check whether have decided to stop uploading
           if(!stopUpload){
             newUpload()
