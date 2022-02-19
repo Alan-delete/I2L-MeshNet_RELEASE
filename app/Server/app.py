@@ -36,8 +36,6 @@ sys.path.append(common_dir)
 
 reload(utils)
 
-
-
 from config import cfg
 from model import get_model
 from nets.SemGCN.export import SemGCN
@@ -197,7 +195,7 @@ def get_output(img_path):
             ymin = bboxs[0][1]
             width = bboxs[0][2] - xmin
             height = bboxs[0][3] - ymin
-            bbox = [xmin , ymin, width, height]
+            bbox = [xmin.cpu() , ymin.cpu(), width.cpu(), height.cpu()]
         else:
             bbox = [1.0, 1.0, original_img_width, original_img_height]
         
