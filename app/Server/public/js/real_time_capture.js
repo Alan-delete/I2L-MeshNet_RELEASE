@@ -2,6 +2,7 @@ const INTERVAL = 500
 const d = new Date()
 let time = null
 let stopUpload = true
+let action_record = []
 import { update_skeleton} from './draw.js'
 
 let start_camera = document.querySelector("#start-camera")
@@ -81,6 +82,7 @@ document.getElementById("start").addEventListener("click",startContinuousUpload)
 document.getElementById("stop").addEventListener("click",stopContinuousUpload)
 
 function startContinuousUpload(){
+    action_record = []
     newUpload()
     stopUpload = false
 }
@@ -88,17 +90,25 @@ function startContinuousUpload(){
 function stopContinuousUpload(){
     time = null
     stopUpload = true
+    console.log(action_record)
 }
 
 function newUpload() {
+    
+    setTimeout(captureAndUpload, INTERVAL )
+    
+    /*
     if (time == null){
         time = d.getTime()
         //here goes the function to capture and upload a new image
     }else if (d.getTime() - time >= INTERVAL){
         //here goes the function to capture and upload a new image
+        stopContinuousUpload()
     }else{
         setTimeout(captureAndUpload, INTERVAL - d.getTime() + time)
     }
+    */
+    
 }
 
 
@@ -127,12 +137,6 @@ function dataURItoBlob(dataURI) {
         ia[i] = byteString.charCodeAt(i);
     }
 
-    //Old Code
-    //write the ArrayBuffer to a blob, and you're done
-    //var bb = new BlobBuilder();
-    //bb.append(ab);
-    //return bb.getBlob(mimeString);
-
     //New Code
     return new Blob([ab], {type: mimeString});
 
@@ -151,28 +155,16 @@ function captureAndUpload() {
     //redraw image from the newly created file
     captured_image.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
 
-  let imgBlob = dataURItoBlob(imageData)
-  let imgFile = new File([imgBlob], "image.png");
+    let imgBlob = dataURItoBlob(imageData)
+    let imgFile = new File([imgBlob], "image.png");
     console.log(imgFile)
-  let formData = new FormData()
-  formData.append('image', imgFile)
+    let formData = new FormData()
+    formData.append('image', imgFile)
     let data = {
           method: 'PUT',
           body: formData,
         }
-    /*srcToFile(img.src, "image.png", "image/png")
-      .then( imgFile => {
-        let formData = new FormData()
-        formData.append('image', imgFile)
-        console.log(imgFile)
-        return {
-          method: 'PUT',
-          body: formData,
-        }
-      })
-      .then( data => {
-        return fetch(url,data)
-      })*/
+
       fetch(url,data).then(response => {
           return response.json()
         })
@@ -181,6 +173,7 @@ function captureAndUpload() {
 
           update_skeleton(res['smpl_joint_coords'], I2L_skeleton);
           update_skeleton(res['human36_joint_coords'], human36_skeleton);
+          action_record.append(res['action_name'])
           //update_skeleton(res['Sem_joints'], Sem_skeleton); 
           //check whether have decided to stop uploading
           if(!stopUpload){
@@ -190,35 +183,4 @@ function captureAndUpload() {
       .then(console.log("succeed here!"))
       .catch(error => console.log(error))
 
-
-/*
-  let formData = new FormData()
-    formData.append('image', imgFile)
-
-    for (var key of formData.values()) {
-      console.log(key)
-    }
-
-    let data = {
-        method: 'PUT',
-        body: formData,
-    }
-    
-    fetch(url,data).then(response => {
-        return response.json()
-    }).then(data => {
-        console.log(data)
-
-        update_skeleton(data['smpl_joint_coords'], I2L_skeleton);
-        update_skeleton(data['human36_joint_coords'], human36_skeleton);
-        //update_skeleton(data['Sem_joints'], Sem_skeleton); 
-
-        //check whether have decided to stop uploading
-        if(!stopUpload){
-            newUpload()
-        }
-    }).catch(error => console.log(error))
-    return 
-
-*/
 }
