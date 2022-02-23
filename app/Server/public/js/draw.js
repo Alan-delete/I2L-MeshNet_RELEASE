@@ -94,6 +94,10 @@ function update_action_list(){
 		}
 	})
 }
+update_action_list()
+
+
+
 
 let camera, controls, scene, renderer
 
