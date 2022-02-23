@@ -13,21 +13,46 @@ document.getElementById("form-image").onchange = evt => {
 form.addEventListener("submit",function(event){
 
     event.preventDefault();
-    window.alert("trying to upload image to" + url)
+    window.alert("trying to upload file to" + url)
 
-    let image = document.getElementById("form-image").files[0]
-    console.log(image)
-    if (image == null || image == ''){
+    let file = document.getElementById("form-image").files[0]
+    console.log(file)
+    if (file == null || file == ''){
         window.alert("You haven't choose a file yet")
         return
     }
     
+    let url = "";
     let formData = new FormData()
-    formData.append('image',image)
-    let data = {
+    
+if (file.type == 'video/mp4'){
+	url = `${ngrok_url}getFitness`
+    	formData.append('video', file)
+	
+	let data = {
         method: 'POST',
         body: formData
+    	}
+    
+  fetch(url, data).then(response => response.json())
+        .then(
+            data => {
+            	console.log(data);
+		update_action_list()
+            )
+        .catch(error => console.log(error))	
     }
+	
+	
+else{
+	url = `${ngrok_url}imageUpload`
+    	formData.append('image',file)
+    
+    
+    	let data = {
+        method: 'POST',
+        body: formData
+    	}
     
   fetch(url, data).then(response => response.json())
         .then(
@@ -44,7 +69,7 @@ form.addEventListener("submit",function(event){
                 }
             )
         .catch(error => console.log(error))
-
+    }
 })
 
 
