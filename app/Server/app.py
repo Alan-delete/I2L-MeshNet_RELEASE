@@ -52,6 +52,7 @@ cudnn.benchmark = True
 
 class Action_reader():
     def __init__(self, json_name = 'standard_joints.json'):
+        self.json_name = json_name
         json_file = os.path.join(app.static_folder, json_name)  
         assert os.path.exists(json_file), 'Cannot find json file'
         self.standard_action = []
@@ -79,7 +80,9 @@ class Action_reader():
             np.array( gt_action[key] ) ).mean()
         return loss
 
-    def save(self, path):
+    def save(self):
+        path = os.path.join(app.static_folder, self.json_name)  
+        assert os.path.exists(path), 'Cannot find json file'
         with open(path,'w') as f :
             json.dump( self.standard_action ,f)
 
@@ -299,6 +302,7 @@ def action_upload():
         file.save(os.path.join(store_folder, filename))
         new_action = get_action_json(os.path.join(store_folder, filename),I2L_model)    
         ar.append(new_action)
+        ar.save()
         vr.update(ar.get_action_list())
     return jsonify(new_action)
 
