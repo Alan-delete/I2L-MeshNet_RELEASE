@@ -47,6 +47,30 @@ form.addEventListener("submit",function(event){
 
 })
 
+
+function update_action_list(){
+	let old_value = new Set()
+	for (let i = 0; i<  Action_Choice.children.length; i++){
+		old_value.add(Action_Choice[i].value)
+	}
+	
+	let url = `${ngrok_url}getFitness`
+	let data = {method: 'GET'}
+	fetch(url, data)
+	.then(res=> res.json())
+	.then(new_action=>{
+	for (let i=0; i<new_action.length; i++){
+		if (!( old_value.has(new_action[i])) ){
+			//console.log(new_action[i])
+			let new_option = document.createElement('option')
+			new_option.value = new_action[i]
+			new_option.text = new_action[i]
+			Action_Choice.append(x)
+		}
+		}
+	})
+}
+
 let camera, controls, scene, renderer
 
 // 2d ARRAY
