@@ -18,6 +18,7 @@ import torch.backends.cudnn as cudnn
 from importlib import reload
 
 UPLOAD_FOLDER = 'uploads'
+FITNESS_VIDEO_FOLDER = 'Fitness_video'
 ALLOWED_EXTENSIONS = {'png','jpg','jpeg','jfif'}
 
 # load YOLO5
@@ -40,7 +41,7 @@ from config import cfg
 from model import get_model
 from nets.SemGCN.export import SemGCN
 from utils.transforms import transform_joint_to_other_db
-from utils.preprocessing import process_bbox,generate_patch_image
+from utils.preprocessing import process_bbox,generate_patch_image,get_action_json
 
 app = Flask(__name__ ,static_folder = 'public',static_url_path='/public')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -77,6 +78,14 @@ class Action_reader():
             loss += np.absolute( np.array(user_action[key]) - \
             np.array( gt_action[key] ) ).mean()
         return loss
+
+    def save(self, path):
+        with open(path,'w') as f :
+            json.dump( self.standard_action ,f)
+
+    def append(self, new_action):
+        self.action_list.append(new_action['name'])
+        self.standard_action.append(new_action)
     
     # user_action is assumed to be in form as {'human_joint_coords': , ...}
     def get_frame_idx(self, user_action):
@@ -100,10 +109,11 @@ class Action_reader():
 class Videos_reader():
     def __init__(self, action_list, video_dir = "Fitness_video"):
         self.videos = []   
+        self.video_dir = video_dir
         self.action_list = action_list
         for action_name in self.action_list:
             video = []
-            video_path = os.path.join(app.static_folder,video_dir,'{}.mp4'.format(action_name))
+            video_path = os.path.join(app.static_folder,self.video_dir,'{}.mp4'.format(action_name))
             cap = cv2.VideoCapture(video_path)   
             assert cap.isOpened(), 'Fail in opening video file'
             
@@ -126,6 +136,24 @@ class Videos_reader():
     def get_frame(self, action_idx,frame_idx):
         return self.action_list[action_idx], self.videos[action_idx][frame_idx]
 
+    # could be optimized later 
+    def update(self,action_list):
+        self.videos = []   
+        self.action_list = action_list
+        for action_name in self.action_list:
+            video = []
+            video_path = os.path.join(app.static_folder,self.video_dir,'{}.mp4'.format(action_name))
+            cap = cv2.VideoCapture(video_path)   
+            assert cap.isOpened(), 'Fail in opening video file'
+            
+            while (cap.isOpened()):
+                success, original_img  = cap.read()
+                if  success: 
+                    video.append(original_img)
+                else:
+                    break
+            self.videos.append(video)
+            cap.release() 
 
 
 def init_I2L(joint_num = 29,test_epoch = 12,mode = 'test'):
@@ -153,7 +181,7 @@ def init_semGCN(test_epoch = 1):
     return SemGCN_model
 
 ar = Action_reader()
-vr = Videos_reader(ar.get_action_list())
+vr = Videos_reader(action_list = ar.get_action_list(), video_dir= FITNESS_VIDEO_FOLDER)
 I2L_model = init_I2L()
 SemGCN_model = init_semGCN()
 
@@ -173,7 +201,8 @@ def home():
 
 @app.route("/getFitness",methods=['GET', 'POST'])
 def get_fitness_action():
-    return jsonify( ar.get_json() )
+    return jsonify(ar.get_action_list() )
+    #return jsonify( ar.get_json() )
 
 
 
@@ -253,5 +282,25 @@ def file_upload():
             
     #return json of coordinates
     return jsonify(data)
+@app.route("/action_upload", methods = ['POST', 'PUT'])
+def action_upload():
+    store_folder = os.path.join(app.static_folder, FITNESS_VIDEO_FOLDER)
+    new_action = []
+    if not os.path.exists(store_folder):
+        os.mkdir(store_folder)
+    if 'video' in request.files:
+        print('upload succeed!')
+        file = request.files['video']
+        if file.filename == '':
+            flash('No selected file')
+            return redirect(request.url)   
+
+        filename = secure_filename(file.filename)
+        file.save(os.path.join(store_folder, filename))
+        new_action = get_action_json(os.path.join(store_folder, filename),I2L_model)    
+        ar.append(new_action)
+        vr.update(ar.get_action_list())
+    return jsonify(new_action)
+
 
 app.run()
