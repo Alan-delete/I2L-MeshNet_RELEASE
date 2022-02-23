@@ -13,7 +13,7 @@ document.getElementById("form-image").onchange = evt => {
 form.addEventListener("submit",function(event){
 
     event.preventDefault();
-    window.alert("trying to upload file to" + url)
+    window.alert("trying to upload file to" + ngrok_url)
 
     let file = document.getElementById("form-image").files[0]
     console.log(file)
@@ -25,49 +25,48 @@ form.addEventListener("submit",function(event){
     let url = "";
     let formData = new FormData()
     
-if (file.type == 'video/mp4'){
-	url = `${ngrok_url}getFitness`
-    	formData.append('video', file)
+    if (file.type == 'video/mp4'){
+	      url = `${ngrok_url}action_upload`
+    	  formData.append('video', file)
 	
-	let data = {
+	      let data = {
         method: 'POST',
         body: formData
-    	}
+    	  }
     
-  fetch(url, data).then(response => response.json())
+        fetch(url, data)
+        .then(response => response.json())
         .then(
             data => {
-            	console.log(data);
-		update_action_list()
-            )
+            console.log(data);
+            update_action_list()
+          })
         .catch(error => console.log(error))	
     }
 	
 	
-else{
-	url = `${ngrok_url}imageUpload`
-    	formData.append('image',file)
+    else{
+	      url = `${ngrok_url}imageUpload`
+    	  formData.append('image',file)
     
     
-    	let data = {
+    	  let data = {
         method: 'POST',
         body: formData
-    	}
+    	  }
     
-  fetch(url, data).then(response => response.json())
+        fetch(url, data).then(response => response.json())
         .then(
             data => {
             console.log(data);
             //update_skeleton(data['smpl_joint_coords'], I2L_skeleton);
             //update_skeleton(data['human36_joint_coords'], human36_skeleton);
             //update_skeleton(data['Sem_joints'], Sem_skeleton); 
-	    	if (data['action_name']== 'Loss exceeds threshold!')
-		    alert("No matching action found!")
-	        else  	
-		    document.getElementById("Action_Choice").value = data['action_name'] 
-			
-                }
-            )
+	    	    if (data['action_name']== 'Loss exceeds threshold!')
+		            alert("No matching action found!")
+	          else  	
+		            document.getElementById("Action_Choice").value = data['action_name'] 
+                })
         .catch(error => console.log(error))
     }
 })
@@ -90,7 +89,7 @@ function update_action_list(){
 			let new_option = document.createElement('option')
 			new_option.value = new_action[i]
 			new_option.text = new_action[i]
-			Action_Choice.append(x)
+			Action_Choice.append(new_option)
 		}
 		}
 	})
