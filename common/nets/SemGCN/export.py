@@ -7,6 +7,7 @@ from nets.layer import make_conv_layers, make_conv1d_layers, make_deconv_layers
 from nets.SemGCN.models.sem_graph_conv import SemGraphConv
 from nets.SemGCN.models.graph_non_local import GraphNonLocal
 from nets.SemGCN.common.graph_utils import adj_mx_from_edges
+from config import cfg
 
 class _GraphConv(nn.Module):
     def __init__(self, adj, input_dim, output_dim, p_dropout=None):
@@ -53,15 +54,20 @@ class _GraphNonLocal(nn.Module):
         self.restored_order = restored_order
 
     def forward(self, x):
-        out = x[:, self.grouped_order, :]
+        # not sure the goal of group_order, so temperally remove it 
+        #out = x[:, self.grouped_order, :]
+        out = x
         out = self.NonLocal(out.transpose(1, 2)).transpose(1, 2)
-        out = out[:, self.restored_order, :]
+        #out = out[:, self.restored_order, :]
         return out
 
 
 class SemGCN(nn.Module):
     def __init__(self, edges,hid_dim= 128, coords_dim=(2, 3), num_layers=4, nodes_group=None, p_dropout=None):
         super(SemGCN, self).__init__()
+
+        # here we try to add non-local block 
+        #nodes_group = cfg.skeleton
 
         num_joints = 0
         for edge in edges:
@@ -76,9 +82,13 @@ class SemGCN(nn.Module):
                 _gconv_layers.append(_ResGraphConv(adj, hid_dim, hid_dim, hid_dim, p_dropout=p_dropout))
         else:
             group_size = len(nodes_group[0])
-            assert group_size > 1
-
-            grouped_order = list(reduce(lambda x, y: x + y, nodes_group))
+            assert group_size > 1 
+            # only in python2
+            #grouped_order = list(reduce(lambda x, y: x + y, nodes_group))
+            grouped_order = []
+            for x, y in nodes_group:
+                grouped_order.append(x)
+                grouped_order.append(y)
             restored_order = [0] * len(grouped_order)
             for i in range(len(restored_order)):
                 for j in range(len(grouped_order)):

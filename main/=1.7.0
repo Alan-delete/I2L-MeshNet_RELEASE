@@ -1,0 +1,4 @@
+Defaulting to user installation because normal site-packages is not writeable
+Requirement already satisfied: torch in /usr/local/lib64/python3.6/site-packages (1.6.0)
+Requirement already satisfied: future in /usr/local/lib/python3.6/site-packages (from torch) (0.18.2)
+Requirement already satisfied: numpy in /data/d0/y19/hnchen9/.local/lib/python3.6/site-packages (from torch) (1.19.5)

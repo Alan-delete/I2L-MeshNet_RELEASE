@@ -42,8 +42,8 @@ class Config:
 
 
     ## training config
-    lr_dec_epoch = [3,5] if 'FreiHAND' not in trainset_3d + trainset_2d + [testset] else [17,21]
-    end_epoch = 1 if 'FreiHAND' not in trainset_3d + trainset_2d + [testset] else 25
+    lr_dec_epoch = [6,8] if 'FreiHAND' not in trainset_3d + trainset_2d + [testset] else [17,21]
+    end_epoch = 9 if 'FreiHAND' not in trainset_3d + trainset_2d + [testset] else 25
     lr = 1e-4
     lr_dec_factor = 10
     train_batch_size = 16 
@@ -58,6 +58,7 @@ class Config:
     gpu_ids = '0'
     num_gpus = 1
     stage = 'lixel' # 2D ,3D
+    non_local = False
     continue_train = True#False
     
     ## directory
@@ -73,10 +74,11 @@ class Config:
     #mano_path = osp.join(root_dir, 'common', 'utils', 'manopth')
     #smpl_path = osp.join(root_dir, 'common', 'utils', 'smplpytorch')
     
-    def set_args(self, gpu_ids, stage='2D', continue_train=False):
+    def set_args(self, gpu_ids, stage='2D', continue_train=False, non_local = False):
         self.gpu_ids = gpu_ids
         self.num_gpus = len(self.gpu_ids.split(','))
         self.stage = stage
+        self.non_local = non_local
         # extend training schedule
         if self.stage == 'param':
             self.lr_dec_epoch = [x+5 for x in self.lr_dec_epoch]

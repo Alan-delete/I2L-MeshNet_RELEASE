@@ -18,7 +18,7 @@ class PoseNet(nn.Module):
         if (cfg.stage =='sem_gcn' ):
             self.feat_conv = make_conv_layers((2048,512,128,joint_num), bnrelu_final = True )
             # shape is (N, 17,64)
-            self.sem_gcn =  SemGCN(cfg.skeleton, coords_dim = (64,1) )
+            self.sem_gcn = SemGCN(cfg.skeleton, coords_dim = (64,1), nodes_group = cfg.skeleton if cfg.non_local else None )
         else:
             self.conv_z_1 = make_conv1d_layers([2048,256*cfg.output_hm_shape[0]], kernel=1, stride=1, padding=0)
             self.conv_z_2 = make_conv1d_layers([256,self.joint_num], kernel=1, stride=1, padding=0, bnrelu_final=False)

@@ -39,7 +39,9 @@ class Model_2Dpose(nn.Module):
         self.pose_backbone.eval()
         with torch.no_grad():
             shared_img_feat, pose_img_feat = self.pose_backbone(inputs['img'])
+        #shared_img_feat, pose_img_feat = self.pose_backbone(inputs['img'])
         # shape of image feature of resnet is [N, 2048, 13, 20]
+        self.pose_net.eval()
         joint_coord_img = self.pose_net(pose_img_feat)
         
         if (mode=='train'):
@@ -79,7 +81,8 @@ def init_weights(m):
     elif type(m) == nn.Conv2d:
         #nn.init.normal_(m.weight,std=0.001)
         nn.init.kaiming_normal_(m.weight,mode = 'fan_out', nonlinearity = 'relu')
-        nn.init.constant_(m.bias, 0)
+        if m.bias != None:
+            nn.init.constant_(m.bias, 0)
     elif type(m) == nn.BatchNorm2d:
         nn.init.constant_(m.weight,1)
         nn.init.constant_(m.bias,0)

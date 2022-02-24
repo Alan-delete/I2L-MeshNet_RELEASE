@@ -8,7 +8,9 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--gpu', type=str,default='0', dest='gpu_ids')
     parser.add_argument('--stage', type=str,default ='lixel', dest='stage')
-    parser.add_argument('--continue',default = False, dest='continue_train', action='store_true')
+    parser.add_argument('--continue',
+default = False, dest='continue_train', action='store_true')
+    parser.add_argument('--non_local',default =False, dest='non_local', action = 'store_true')
     args = parser.parse_args()
 
     if not args.gpu_ids:
@@ -29,14 +31,14 @@ def main():
     
     # argument parse and create log
     args = parse_args()
-    cfg.set_args(args.gpu_ids, args.stage, args.continue_train)
-    cudnn.benchmark = True
+    cfg.set_args(args.gpu_ids, args.stage, args.continue_train, args.non_local)
+    #cudnn.benchmark = True
     print('Stage: ' + args.stage)
 
     trainer = Trainer()
     trainer._make_batch_generator()
     trainer._make_model()
-
+    torch.autograd.set_detect_anomaly(True)
     # train
     for epoch in range(trainer.start_epoch, cfg.end_epoch):
         
@@ -46,14 +48,14 @@ def main():
         for itr, (inputs, targets, meta_info) in enumerate(trainer.batch_generator):
             trainer.read_timer.toc()
             trainer.gpu_timer.tic()
+      
             # forward
             trainer.optimizer.zero_grad()
             loss = trainer.model(inputs, targets, meta_info, 'train')
-            #loss = trainer.criteria(outputs['joint_coord_img'], targets['orig_joint_img'], meta_info['orig_joint_valid'], meta_info['is_3D'])
-            #loss = trainer.model(inputs, targets, meta_info, 'train')
             loss = {k:loss[k].mean() for k in loss}
             # backward
             sum(loss[k] for k in loss).backward()
+            torch.nn.utils.clip_grad_norm_(trainer.model.parameters(), 1.)
             trainer.optimizer.step()
             trainer.gpu_timer.toc()
             screen = [
