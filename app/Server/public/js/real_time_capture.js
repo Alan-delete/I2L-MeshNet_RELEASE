@@ -81,16 +81,19 @@ start_capture.addEventListener('click',function(){
 document.getElementById("start").addEventListener("click",startContinuousUpload)
 document.getElementById("stop").addEventListener("click",stopContinuousUpload)
 
-function startContinuousUpload(){
+function startContinuousUpload() {
+    result.style.display = 'block';
     action_record = []
     newUpload()
     stopUpload = false
 }
 
-function stopContinuousUpload(){
+function stopContinuousUpload() {
+    result.style.display = 'none';
     time = null
     stopUpload = true
     console.log(action_record)
+
 }
 
 function newUpload() {
@@ -136,11 +139,13 @@ function test_only() {
 
 
           //update_skeleton(res['Sem_joints'], Sem_skeleton); 
-          // action recognition
+      // action recognition
+      let dict = new Object()
+      let max_value = 0.00001
+      let predicted_action = ''
+      let total_loss = 0
         if (action_record.length > 10) {
-          let dict = new Object()
-          let max_value = 0
-          let predicted_action = ''
+
             for (let i = 2; i < action_record.length-2; i++) {
               if (action_record[i]['action_name'] in dict) {
                 dict[action_record[i]['action_name']] += 1
@@ -157,11 +162,33 @@ function test_only() {
                 }
               }
             }
-            console.log ('predicted action is:'+ predicted_action)
+          console.log ('predicted action is:'+ predicted_action)
+          Action_Name.text = predicted_action
 
+          for (let i = 0; i < action_record.length; i++) {
+            if (action_record[i]['action_name'] == predicted_action)
+              total_loss += action_record[i]['loss']
+          }
+          Average_Score.text = total_loss/max_value
           }
       if (!stopUpload)
         newUpload()
+      else {
+
+        let tr = document.createElement("tr")
+			  let td_1 = document.createElement("td")
+			  td_1.appendChild(document.createTextNode(predicted_action))
+			  let td_2 = document.createElement("td")
+			  td_2.appendChild(document.createTextNode(total_loss/max_value))
+			  let td_3 = document.createElement("td")
+			  td_3.appendChild(document.createTextNode('NA'))
+			  tr.appendChild(td_1)
+			  tr.appendChild(td_2)
+			  tr.appendChild(td_3)
+        record.append(tr)
+        Action_Name.text = ''
+        Average_Score.text = ''
+      }
     })
     .then(console.log("test succeed"))
     .catch(err => console.log(err))
@@ -203,7 +230,6 @@ function dataURItoBlob(dataURI) {
 
 
 
-
 function captureAndUpload() {
     //capture img from video
     captured_image.getContext('2d').drawImage(video,0,0,captured_image.width,captured_image.height);
@@ -234,7 +260,7 @@ function captureAndUpload() {
           console.log(res)
 
           update_skeleton(res['smpl_joint_coords'], I2L_skeleton);
-          update_skeleton(res['human36_joint_coords'], human36_skeleton);
+          //update_skeleton(res['human36_joint_coords'], human36_skeleton);
 
 
         if (action_record[0]['action_name'] != 'Loss exceeds threshold!') {
@@ -246,35 +272,59 @@ function captureAndUpload() {
 
 
           //update_skeleton(res['Sem_joints'], Sem_skeleton); 
-          // action recognition
+        // action recognition
+        let dict = new Object()
+        let max_value = 0.00001
+        let predicted_action = ''
+        let total_loss = 0
         if (action_record.length > 10) {
-          let dict = new Object()
-          let max_value = 0
-          let predicted_action = ''
-            for (let i = 2; i < action_record.length-2; i++) {
-              if (action_record[i]['action_name'] in dict) {
-                dict[action_record[i]['action_name']] += 1
+
+          for (let i = 2; i < action_record.length-2; i++) {
+            if (action_record[i]['action_name'] in dict) {
+              dict[action_record[i]['action_name']] += 1
+              if (dict[action_record[i]['action_name']] > max_value) {
+                max_value = dict[action_record[i]['action_name']]
+                predicted_action = action_record[i]['action_name']
+              }
+            }
+              else {
+                dict[action_record[i]['action_name']] = 1
                 if (dict[action_record[i]['action_name']] > max_value) {
                   max_value = dict[action_record[i]['action_name']]
                   predicted_action = action_record[i]['action_name']
                 }
               }
-              else {
-                dict[action_record[i]['action_name']] = 1
-                  if (dict[action_record[i]['action_name']] > max_value) {
-                  max_value = dict[action_record[i]['action_name']]
-                  predicted_action = action_record[i]['action_name']
-                }
-              }
             }
-            console.log ('predicted action is:'+ predicted_action)
+          console.log ('predicted action is:'+ predicted_action)
+          Action_Name.text = predicted_action
 
+          for (let i = 0; i < action_record.length; i++) {
+            if (action_record[i]['action_name'] == predicted_action)
+              total_loss += action_record[i]['loss']
           }
+          Average_Score.text = total_loss/max_value
+        }
+          
 
           //check whether have decided to stop uploading
           if(!stopUpload){
             newUpload()
           }
+          else {
+            let tr = document.createElement("tr");
+            let td_1 = document.createElement("td");
+            td_1.appendChild(document.createTextNode(predicted_action));
+            let td_2 = document.createElement("td");
+            td_2.appendChild(document.createTextNode(total_loss / max_value));
+            let td_3 = document.createElement("td");
+            td_3.appendChild(document.createTextNode('NA'));
+            tr.appendChild(td_1);
+            tr.appendChild(td_2);
+            tr.appendChild(td_3);
+            record.append(tr);
+            Action_Name.text = ''
+            Average_Score.text = ''
+      }
       })
       .then(console.log("succeed here!"))
       .catch(error => console.log(error))
