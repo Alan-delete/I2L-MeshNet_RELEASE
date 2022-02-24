@@ -18,7 +18,7 @@
 					<img id="blah" src="public/match_frame.png" alt="your image" class = 'justify-content-center'width = "75%" height="75%"/>
 						<div class = 'mx-2' id = 'interact'>
 							<select id = "Action_Choice" class = 'form-select'>
-								<option selected>Choose the action your want</option>
+								<option selected value = "Default">Choose the action your want</option>
 								<option value = "Jump_Jack">Jump_Jack</option>
 								<option value = "Wide_Push_Up">Wide_Push_Up</option>
 							</select>
@@ -69,10 +69,10 @@
 
 				<div class = 'col-8'>
 					<div class ='mx-2 mt-1 my-1' id="3dCanvas" style="border:3px solid #000000;"></div>
-						<div id= "result" class='my-3 text-center'>
-							<ul hidden class="list-group">
+						<div id= "result" class='my-3 text-center' style= "display: none;">
+							<ul class="list-group">
   								<li class="list-group-item">Action Name:<a id= "Action_Name"></a></li>
-  								<li class="list-group-item">Average Socre:<a id= "Average_Socre"></a></li>
+  								<li class="list-group-item">Average Socre:<a id= "Average_Score"></a></li>
   								<li class="list-group-item">Body Part to be impoved:<a id= "Body_Part"></a></li>
 							</ul>
 						</div>
@@ -83,20 +83,24 @@
 				<div class='text-center'>
 					<details>
 						<summary><strong> Record</summary>
-						<table id= "record" class="my-2 table table-success table-hover">
-							<tr>
-								<td>Action Name</td>
-								<td>Average Socre</td>
-								<td>Body Part to be impoved</td>
-							</tr>
+						<table  class="my-2 table table-success table-hover">
+							<thead>
+								<tr>
+									<td>Action Name</td>
+									<td>Average Socre</td>
+									<td>Body Part to be impoved</td>
+								</tr>
+							</thead>
+							<tbody id= "record">
+							</tbody>
 						</table>
 					</details>
 				</div>
 			</div>
 		</div>
 		</main >
-		<script> Action_Name.text = "aaa"</script>
-		<!--<script src="public/js/three.js"></script> -->
+		<!--script> Action_Name.text = "aaa"</script>
+		<script src="public/js/three.js"></script> -->
 		<script src="public/js/global_config.js"></script>
 		<script type="module" src="public/js/draw.js"></script>
 		<script type="module" src="public/js/real_time_capture.js"></script>
