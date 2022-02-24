@@ -8,6 +8,7 @@ import json
 import os
 import sys
 import cv2
+import argparse
 from numpy.core.numeric import Infinity
 from werkzeug.utils import secure_filename
 import numpy as np
@@ -49,6 +50,30 @@ CORS(app)
 run_with_ngrok(app)   
 cudnn.benchmark = True
 
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--gpu', type=str,default='0', dest='gpu_ids')
+    parser.add_argument('--stage', type=str,default ='lixel', dest='stage')
+    parser.add_argument('--continue',default = False, dest='continue_train', action='store_true')
+    parser.add_argument('--non_local',default = False, dest='non_local', action='store_true')
+    args = parser.parse_args()
+
+    if not args.gpu_ids:
+        assert 0, "Please set propoer gpu ids"
+ 
+    if '-' in args.gpu_ids:
+        gpus = args.gpu_ids.split('-')
+        gpus[0] = int(gpus[0])
+        gpus[1] = int(gpus[1]) + 1
+        args.gpu_ids = ','.join(map(lambda x: str(x), list(range(*gpus))))
+
+    if not args.stage:
+        assert 0, "Please set training stage among [lixel, param]"
+   
+    return args
+args = parse_args()
+# cfg.set_args(args.gpu, args.stage, args.continue_train, args.non_local)
 
 class Action_reader():
     def __init__(self, json_name = 'standard_joints.json'):
