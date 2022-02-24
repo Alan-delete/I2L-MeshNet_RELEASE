@@ -57,14 +57,17 @@ class Trainer(Base):
         return optimizer
 
     def save_model(self, state, epoch):
-        file_path = osp.join(cfg.model_dir,'snapshot_{}.pth.tar'.format(str(epoch)))
+        file_path = osp.join(cfg.model_dir,'second_hybrid_{}.pth.tar'.format(str(epoch)))
         torch.save(state, file_path)
         self.logger.info("Write snapshot into {}".format(file_path))
 
     def load_model(self, model, optimizer):
-        model_file_list = glob.glob(osp.join(cfg.model_dir,'*.pth.tar'))
-        cur_epoch = max([int(file_name[file_name.find('snapshot_') + 9 : file_name.find('.pth.tar')]) for file_name in model_file_list])
-        ckpt_path = osp.join(cfg.model_dir, 'snapshot_' + str(cur_epoch) + '.pth.tar')
+        model_file_list = glob.glob(osp.join(cfg.model_dir,'second_hybrid_*.pth.tar'))
+        #cur_epoch = max([int(file_name[file_name.find('snapshot_') + 9 : file_name.find('.pth.tar')]) for file_name in model_file_list])
+        #ckpt_path = osp.join(cfg.model_dir, 'snapshot_' + str(cur_epoch) + '.pth.tar')
+        cur_epoch = max([int(file_name[file_name.find('hybrid_') + 7 : file_name.find('.pth.tar')]) for file_name in model_file_list])
+        ckpt_path = osp.join(cfg.model_dir, 'second_hybrid_' + str(cur_epoch) + '.pth.tar')
+        #ckpt_path = osp.join(cfg.model_dir, 'snapshot_demo.pth.tar')
         ckpt = torch.load(ckpt_path) 
         start_epoch = ckpt['epoch'] + 1
         model.load_state_dict(ckpt['network'], strict=False)
@@ -92,10 +95,13 @@ class Trainer(Base):
     
     def _make_batch_generator(self):
         # data load and construct batch generator
+        normalize = transforms.Normalize(mean = [0.485,0.456,0.406], std  = [0.229,0.224,0.225])
+        transform = transforms.Compose([transforms.ToTensor(),normalize])
         self.logger.info("Creating dataset...")
         trainset3d_loader = []
         for i in range(len(cfg.trainset_3d)):
-            trainset3d_loader.append(eval(cfg.trainset_3d[i])(transforms.ToTensor(), "train"))
+            #trainset3d_loader.append(eval(cfg.trainset_3d[i])(transforms.ToTensor(), "train"))
+            trainset3d_loader.append(eval(cfg.trainset_3d[i])(transform, "train"))
         trainset2d_loader = []
         for i in range(len(cfg.trainset_2d)):
             trainset2d_loader.append(eval(cfg.trainset_2d[i])(transforms.ToTensor(), "train"))
@@ -137,7 +143,6 @@ class Trainer(Base):
         self.start_epoch = start_epoch
         self.model = model
         self.optimizer = optimizer
-        self.criteria = CoordLoss()
 
 class Tester(Base):
     def __init__(self, test_epoch):
@@ -157,7 +162,8 @@ class Tester(Base):
 
     def _make_model(self):
         #model_path = os.path.join(cfg.model_dir, 'snapshot_%d.pth.tar' % self.test_epoch)
-        model_path = os.path.join(cfg.model_dir, 'snapshot_demo.pth.tar' )
+        #model_path = os.path.join(cfg.model_dir, 'snapshot_demo.pth.tar' )
+        model_path = os.path.join(cfg.model_dir, 'hybrid_1.pth.tar' )
         assert os.path.exists(model_path), 'Cannot find model at ' + model_path
         self.logger.info('Load checkpoint from {}'.format(model_path))
         

@@ -18,6 +18,7 @@ from utils.transforms import world2cam, cam2pixel, pixel2cam, rigid_align, trans
 class Human36M(torch.utils.data.Dataset):
     def __init__(self, transform, data_split):
         self.transform = transform
+        # according to resnet backbone instruction
         self.data_split = data_split
         self.img_dir = osp.join('..', 'data', 'Human36M', 'images')
         self.annot_path = osp.join('..', 'data', 'Human36M', 'annotations')
@@ -44,7 +45,14 @@ class Human36M(torch.utils.data.Dataset):
             self.joint_num = cfg.joint_num
             self.joints_name = cfg.joints_name
             self.skeleton = cfg.skeleton
-            
+        #self.joint_num = cfg.joint_num
+        #self.joints_name = cfg.joints_name
+        #self.skeleton = cfg.skeleton
+        #self.joint_num = cfg.smpl_joint_num
+        #self.joints_name = cfg.smpl_joints_name
+        #self.skeleton = cfg.smpl_skeleton
+           
+
         self.root_joint_idx = self.joints_name.index('Pelvis')
         self.datalist = self.load_data()
 
@@ -148,6 +156,8 @@ class Human36M(torch.utils.data.Dataset):
             else:
                 bbox = process_bbox(np.array(ann['bbox']), img['width'], img['height'])
                 if bbox is None: continue
+                # the following line is to test effect og bounding box
+                bbox = [1.0, 1.0, img['width']-2, img['height']-2]
                 root_joint_depth = joint_cam[self.h36m_root_joint_idx][2]
     
             datalist.append({
@@ -173,7 +183,8 @@ class Human36M(torch.utils.data.Dataset):
         # img
         img = load_img(img_path)
         img, img2bb_trans, bb2img_trans, rot, do_flip = augmentation(img, bbox, self.data_split)
-        img = self.transform(img.astype(np.float32))/255.
+        #img = self.transform(img.astype(np.float32))/255.
+        img = self.transform(img.astype(np.uint8))
         
         if self.data_split == 'train':
             # h36m gt
@@ -221,8 +232,20 @@ class Human36M(torch.utils.data.Dataset):
             meta_info = {'orig_joint_valid': h36m_joint_valid, 'orig_joint_trunc': h36m_joint_trunc, 'is_3D': float(True)}
             return inputs, targets, meta_info
         else:
+            h36m_joint_img = data['joint_img']
+            h36m_joint_img_xy1 = np.concatenate((h36m_joint_img[:,:2], np.ones_like(h36m_joint_img[:,:1])),1)
+            h36m_joint_img[:,:2] = np.dot(img2bb_trans, h36m_joint_img_xy1.transpose(1,0)).transpose(1,0)
+            h36m_joint_img[:,0] = h36m_joint_img[:,0] / cfg.input_img_shape[1] * cfg.output_hm_shape[2]
+            h36m_joint_img[:,1] = h36m_joint_img[:,1] / cfg.input_img_shape[0] * cfg.output_hm_shape[1]
+            h36m_joint_img[:,2] = h36m_joint_img[:,2] - h36m_joint_img[self.h36m_root_joint_idx][2] # root-relative
+            h36m_joint_img[:,2] = (h36m_joint_img[:,2] / (cfg.bbox_3d_size * 1000  / 2) + 1)/2. * cfg.output_hm_shape[0] # change cfg.bbox_3d_size from meter to milimeter
+ # function of "+1" need to be known            
+
+            #h36m_joint_img = transform_joint_to_other_db(h36m_joint_img, self.h36m_joints_name, self.joints_name)
+           
+
             inputs = {'img': img}
-            targets = {}
+            targets = {'orig_joint_img':h36m_joint_img}
             meta_info = {'bb2img_trans': bb2img_trans}
             return inputs, targets, meta_info
 
@@ -242,26 +265,12 @@ class Human36M(torch.utils.data.Dataset):
             joint_coord[:,1] = joint_coord[:,1] / cfg.output_hm_shape[1] * cfg.input_img_shape[0]
             joint_coord_xy1 = np.concatenate((joint_coord[:,:2], np.ones_like(joint_coord[:,:1])),1)
             joint_coord[:,:2] = np.dot(out['bb2img_trans'], joint_coord_xy1.transpose(1,0)).transpose(1,0)[:,:2]
-            # z: devoxelize and translate to absolute depth
-            root_joint_depth = annot['root_joint_depth']
-            joint_coord[:,2] = (joint_coord[:,2] / cfg.output_hm_shape[0] * 2. - 1) * (cfg.bbox_3d_size * 1000 / 2)
-         
-            joint_coord[:,2] = joint_coord[:,2] + root_joint_depth
+            joint_coord[:,2] = (joint_coord[:,2] / cfg.output_hm_shape[0] * 2. - 1) * (cfg.bbox_3d_size * 1000 / 2) 
             # camera back-projection
             cam_param = annot['cam_param']
             focal, princpt = cam_param['focal'], cam_param['princpt']
             joint_coord_cam = pixel2cam(joint_coord, focal, princpt)
          
-
-            # h36m joint from gt mesh
-            #pose_coord_gt_h36m = annot['joint_cam'] 
-            #pose_coord_gt_h36m = annot['joint_img'] 
-            #pose_coord_gt_h36m = pose_coord_gt_h36m - pose_coord_gt_h36m[self.h36m_root_joint_idx,None] # root-relative 
-            #print("joint_img")
-            #for joint in pose_coord_gt_h36m:
-                #print('[',joint[0] ,',',joint[1] , ',',joint[2] ,'],')
-            #pose_coord_gt_h36m = pose_coord_gt_h36m[self.h36m_eval_joint,:] 
-            
             pose_coord_gt_h36m = annot['joint_cam'] 
             pose_coord_gt_h36m = pose_coord_gt_h36m - pose_coord_gt_h36m[self.h36m_root_joint_idx,None] # root-relative 
             #print("joint_cam")
@@ -269,15 +278,7 @@ class Human36M(torch.utils.data.Dataset):
                # print('[',joint[0] ,',',joint[1] , ',',joint[2] ,'],')
             pose_coord_gt_h36m = pose_coord_gt_h36m[self.h36m_eval_joint,:] 
             
-            # h36m joint from lixel mesh
-            #joint_coord= joint_coord-joint_coord[self.h36m_root_joint_idx,None] # root-relative
-            #joint_coord = transform_joint_to_other_db(joint_coord, self.joints_name, self.h36m_joints_name)
-            #print("output_img")
-            #for joint in joint_coord:
-                #print('[',joint[0] ,',',joint[1] , ',',joint[2] ,'],')
             
-            #joint_coord= joint_coord[self.h36m_eval_joint,:]
-             
             joint_coord= joint_coord_cam-joint_coord_cam[self.h36m_root_joint_idx,None] # root-relative
             joint_coord = transform_joint_to_other_db(joint_coord, self.joints_name, self.h36m_joints_name)
             joint_coord= joint_coord[self.h36m_eval_joint,:]
