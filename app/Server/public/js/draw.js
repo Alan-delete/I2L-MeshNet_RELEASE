@@ -13,34 +13,95 @@ document.getElementById("form-image").onchange = evt => {
 form.addEventListener("submit",function(event){
 
     event.preventDefault();
-    window.alert("trying to upload image to" + url)
+    window.alert("trying to upload file to" + ngrok_url)
 
-    let image = document.getElementById("form-image").files[0]
-    console.log(image)
-    if (image == null || image == ''){
+    let file = document.getElementById("form-image").files[0]
+    console.log(file)
+    if (file == null || file == ''){
         window.alert("You haven't choose a file yet")
         return
     }
     
+    let url = "";
     let formData = new FormData()
-    formData.append('image',image)
-    let data = {
+    
+    if (file.type == 'video/mp4'){
+	      url = `${ngrok_url}action_upload`
+    	  formData.append('video', file)
+	
+	      let data = {
         method: 'POST',
         body: formData
-    }
+    	  }
     
-  fetch(url, data).then(response => response.json())
+        fetch(url, data)
+        .then(response => response.json())
         .then(
             data => {
             console.log(data);
-            update_skeleton(data['smpl_joint_coords'], I2L_skeleton);
-            update_skeleton(data['human36_joint_coords'], human36_skeleton);
-            update_skeleton(data['Sem_joints'], Sem_skeleton); 
-                }
-            )
+            update_action_list()
+            alert("video upload successfully")
+          })
+        .catch(error => console.log(error))	
+    }
+	
+	
+    else{
+	      url = `${ngrok_url}imageUpload`
+    	  formData.append('image',file)
+    
+    
+    	  let data = {
+        method: 'POST',
+        body: formData
+    	  }
+    
+        fetch(url, data).then(response => response.json())
+        .then(
+            data => {
+            console.log(data);
+            //update_skeleton(data['smpl_joint_coords'], I2L_skeleton);
+            //update_skeleton(data['human36_joint_coords'], human36_skeleton);
+            //update_skeleton(data['Sem_joints'], Sem_skeleton); 
+		  
+	    	  if (data['action_name']== 'Loss exceeds threshold!')
+		          alert("No matching action found!")
+	          else { 	
+			  alert("image upload successfully")
+		          document.getElementById("Action_Choice").value = data['action_name']
+		  }
+                })
         .catch(error => console.log(error))
-
+    }
 })
+
+
+function update_action_list(){
+	let old_value = new Set()
+	for (let i = 0; i<  Action_Choice.children.length; i++){
+		old_value.add(Action_Choice[i].value)
+	}
+	
+	let url = `${ngrok_url}getFitness`
+	let data = {method: 'GET'}
+	fetch(url, data)
+	.then(res=> res.json())
+	.then(new_action=>{
+	for (let i=0; i<new_action.length; i++){
+		if (!( old_value.has(new_action[i])) ){
+			//console.log(new_action[i])
+			let new_option = document.createElement('option')
+			new_option.value = new_action[i]
+			new_option.text = new_action[i]
+			Action_Choice.append(new_option)
+		}
+		}
+	})
+}
+update_action_list()
+
+
+
 
 let camera, controls, scene, renderer
 

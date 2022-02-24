@@ -3,6 +3,66 @@ import cv2
 import random
 from config import cfg
 import math
+import torch
+import torchvision.transforms as transforms
+from utils.transforms import transform_joint_to_other_db
+
+def get_action_json(path, model):
+    vr = cv2.VideoCapture(path)
+    if (vr.isOpened() == False):
+        print("Error openeing the file")
+        return 
+    #result  = {'name': action_name, 'human36_joint_coords': [],'smpl_joint_coords': [], 'human36_joint_vector':[] ,'smpl_joint_vector':[]}
+    result = {'name': path[ path.rfind('/')+1 : path.rfind('.')],'data':[]}
+    skip_index = 0
+    while (vr.isOpened()):
+        skip_index += 1
+        if (skip_index%3 != 0):
+            continue
+
+        success, original_img  = vr.read()
+        if success:
+            # use frame
+            data_per_frame = {'human36_joint_coords': None,'smpl_joint_coords': None,\
+'human36_joint_vector':None ,'smpl_joint_vector':None}
+
+            original_img_height, original_img_width = original_img.shape[:2]
+
+            # since the ground truth video is supposed to be low-noisy, we abandon YOLO here 
+            bbox = [1.0, 1.0, original_img_width, original_img_height] 
+
+            #bbox = [139.41, 102.25, 222.39, 241.57] # xmin, ymin, width, height
+            bbox = process_bbox(bbox, original_img_width, original_img_height)
+            img, img2bb_trans, bb2img_trans = generate_patch_image(original_img, bbox, 1.0, 0.0, False,
+cfg.input_img_shape) 
+
+            #img = original_img
+            transform = transforms.ToTensor()
+            img =  transform(img.astype(np.float32))/255
+            img = img.cuda()[None,:,:,:]
+
+                # forward
+            inputs = {'img': img}
+            targets = {}
+            meta_info = {'bb2img_trans':None}
+            with torch.no_grad():
+                out = model(inputs,targets, meta_info, 'test' )
+                smpl_joints = out['joint_coord_img'].cpu().numpy()[0]
+                human36_joints = transform_joint_to_other_db(smpl_joints,cfg.smpl_joints_name ,
+cfg.joints_name)
+                data_per_frame['human36_joint_coords'] = human36_joints.tolist()
+                data_per_frame['smpl_joint_coords'] = smpl_joints.tolist()
+                human36_joint_vector = [ (human36_joints[ edge[1]] - human36_joints[edge[0]]).tolist() for
+edge in cfg.skeleton]
+                smpl_joint_vector = [ (smpl_joints[edge[1]] - smpl_joints[edge[0]]).tolist() for edge in
+cfg.smpl_skeleton]
+                data_per_frame['human36_joint_vector'] = human36_joint_vector
+                data_per_frame['smpl_joint_vector'] = smpl_joint_vector
+                result['data'].append(data_per_frame)
+        else:
+            break
+    #print(standard_fitness_action)
+    return result
 
 def load_img(path, order='RGB'):
     img = cv2.imread(path, cv2.IMREAD_COLOR | cv2.IMREAD_IGNORE_ORIENTATION)

@@ -8,6 +8,7 @@ import json
 import os
 import sys
 import cv2
+import argparse
 from numpy.core.numeric import Infinity
 from werkzeug.utils import secure_filename
 import numpy as np
@@ -18,6 +19,7 @@ import torch.backends.cudnn as cudnn
 from importlib import reload
 
 UPLOAD_FOLDER = 'uploads'
+FITNESS_VIDEO_FOLDER = 'Fitness_video'
 ALLOWED_EXTENSIONS = {'png','jpg','jpeg','jfif'}
 
 # load YOLO5
@@ -36,13 +38,11 @@ sys.path.append(common_dir)
 
 reload(utils)
 
-
-
 from config import cfg
 from model import get_model
 from nets.SemGCN.export import SemGCN
 from utils.transforms import transform_joint_to_other_db
-from utils.preprocessing import process_bbox,generate_patch_image
+from utils.preprocessing import process_bbox,generate_patch_image,get_action_json
 
 app = Flask(__name__ ,static_folder = 'public',static_url_path='/public')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -51,11 +51,37 @@ run_with_ngrok(app)
 cudnn.benchmark = True
 
 
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--gpu', type=str,default='0', dest='gpu_ids')
+    parser.add_argument('--stage', type=str,default ='lixel', dest='stage')
+    parser.add_argument('--continue',default = False, dest='continue_train', action='store_true')
+    parser.add_argument('--non_local',default = False, dest='non_local', action='store_true')
+    args = parser.parse_args()
+
+    if not args.gpu_ids:
+        assert 0, "Please set propoer gpu ids"
+ 
+    if '-' in args.gpu_ids:
+        gpus = args.gpu_ids.split('-')
+        gpus[0] = int(gpus[0])
+        gpus[1] = int(gpus[1]) + 1
+        args.gpu_ids = ','.join(map(lambda x: str(x), list(range(*gpus))))
+
+    if not args.stage:
+        assert 0, "Please set training stage among [lixel, param]"
+   
+    return args
+args = parse_args()
+# cfg.set_args(args.gpu, args.stage, args.continue_train, args.non_local)
+
 class Action_reader():
     def __init__(self, json_name = 'standard_joints.json'):
+        self.json_name = json_name
         json_file = os.path.join(app.static_folder, json_name)  
         assert os.path.exists(json_file), 'Cannot find json file'
         self.standard_action = []
+        self.user_action_idx = None 
         with open(json_file) as f:
             standard_action = json.load(f)  
             self.standard_action = standard_action
@@ -78,21 +104,32 @@ class Action_reader():
             loss += np.absolute( np.array(user_action[key]) - \
             np.array( gt_action[key] ) ).mean()
         return loss
+
+    def save(self):
+        path = os.path.join(app.static_folder, self.json_name)  
+        assert os.path.exists(path), 'Cannot find json file'
+        with open(path,'w') as f :
+            json.dump( self.standard_action ,f)
+
+    def append(self, new_action):
+        self.action_list.append(new_action['name'])
+        self.standard_action.append(new_action)
     
     # user_action is assumed to be in form as {'human_joint_coords': , ...}
     def get_frame_idx(self, user_action):
         #result = {'action_idx':None, 'frame_idx':None}
         loss = Infinity
-        first_idx = 0
-        second_idx = 0
+        threshold = Infinity
+        first_idx = -1
+        second_idx = -1
         for action_idx, action in enumerate (self.standard_action) :
             for frame_idx, action_per_frame in enumerate(action['data']):
                 temp_loss = self.get_loss(user_action, action_per_frame)
-                if (temp_loss<loss):
+                if temp_loss<loss and temp_loss < threshold:
                     loss = temp_loss
                     first_idx = action_idx
                     second_idx = frame_idx
-        return first_idx,second_idx
+        return first_idx,second_idx, loss
 
     def get_action_list(self):
         return self.action_list
@@ -100,10 +137,11 @@ class Action_reader():
 class Videos_reader():
     def __init__(self, action_list, video_dir = "Fitness_video"):
         self.videos = []   
+        self.video_dir = video_dir
         self.action_list = action_list
         for action_name in self.action_list:
             video = []
-            video_path = os.path.join(app.static_folder,video_dir,'{}.mp4'.format(action_name))
+            video_path = os.path.join(app.static_folder,self.video_dir,'{}.mp4'.format(action_name))
             cap = cv2.VideoCapture(video_path)   
             assert cap.isOpened(), 'Fail in opening video file'
             
@@ -126,6 +164,24 @@ class Videos_reader():
     def get_frame(self, action_idx,frame_idx):
         return self.action_list[action_idx], self.videos[action_idx][frame_idx]
 
+    # could be optimized later 
+    def update(self,action_list):
+        self.videos = []   
+        self.action_list = action_list
+        for action_name in self.action_list:
+            video = []
+            video_path = os.path.join(app.static_folder,self.video_dir,'{}.mp4'.format(action_name))
+            cap = cv2.VideoCapture(video_path)   
+            assert cap.isOpened(), 'Fail in opening video file'
+            
+            while (cap.isOpened()):
+                success, original_img  = cap.read()
+                if  success: 
+                    video.append(original_img)
+                else:
+                    break
+            self.videos.append(video)
+            cap.release() 
 
 
 def init_I2L(joint_num = 29,test_epoch = 12,mode = 'test'):
@@ -153,7 +209,7 @@ def init_semGCN(test_epoch = 1):
     return SemGCN_model
 
 ar = Action_reader()
-vr = Videos_reader(ar.get_action_list())
+vr = Videos_reader(action_list = ar.get_action_list(), video_dir= FITNESS_VIDEO_FOLDER)
 I2L_model = init_I2L()
 SemGCN_model = init_semGCN()
 
@@ -173,7 +229,8 @@ def home():
 
 @app.route("/getFitness",methods=['GET', 'POST'])
 def get_fitness_action():
-    return jsonify( ar.get_json() )
+    return jsonify(ar.get_action_list() )
+    #return jsonify( ar.get_json() )
 
 
 
@@ -195,7 +252,7 @@ def get_output(img_path):
             ymin = bboxs[0][1]
             width = bboxs[0][2] - xmin
             height = bboxs[0][3] - ymin
-            bbox = [xmin , ymin, width, height]
+            bbox = [xmin.cpu() , ymin.cpu(), width.cpu(), height.cpu()]
         else:
             bbox = [1.0, 1.0, original_img_width, original_img_height]
         
@@ -220,7 +277,8 @@ def get_output(img_path):
                 'human36_joint_coords':human36_joints.tolist(),\
                 'Sem_joints':Sem_joints.tolist() }
 
-    
+# as tested on my laptop, currently the speed of file upload and neural network process is nearly 1 frame per second. For pure neural network process, 19.84 seconds for 100 image   
+# also returns match_action name, the action estimate will be executed on front end, since it's little calculation and every user has their own different data record.
 @app.route("/imageUpload", methods = ['PUT','POST'])
 def file_upload():
     # print("file uploaded, processing")
@@ -240,11 +298,38 @@ def file_upload():
             filename = secure_filename(file.filename)
             file.save(os.path.join(store_folder, filename))
             data = get_output(os.path.join(store_folder, filename))
-            action_idx, frame_idx = ar.get_frame_idx(data)
-            match_action, match_frame = vr.get_frame(action_idx, frame_idx)
-            cv2.imwrite(os.path.join(app.static_folder, 'match_frame.png') , match_frame)
+            action_idx, frame_idx, loss = ar.get_frame_idx(data)
+            if action_idx == -1:
+                data['action_name'] = 'Loss exceeds threshold!'
+                data['loss'] = loss             
+            else:
+                match_action, match_frame = vr.get_frame(action_idx, frame_idx)
+                data['action_name'] = match_action
+                data['loss'] = loss
+                cv2.imwrite(os.path.join(app.static_folder, 'match_frame.png') , match_frame)
             
     #return json of coordinates
     return jsonify(data)
+@app.route("/action_upload", methods = ['POST', 'PUT'])
+def action_upload():
+    store_folder = os.path.join(app.static_folder, FITNESS_VIDEO_FOLDER)
+    new_action = []
+    if not os.path.exists(store_folder):
+        os.mkdir(store_folder)
+    if 'video' in request.files:
+        print('upload succeed!')
+        file = request.files['video']
+        if file.filename == '':
+            flash('No selected file')
+            return redirect(request.url)   
+
+        filename = secure_filename(file.filename)
+        file.save(os.path.join(store_folder, filename))
+        new_action = get_action_json(os.path.join(store_folder, filename),I2L_model)    
+        ar.append(new_action)
+        ar.save()
+        vr.update(ar.get_action_list())
+    return jsonify(new_action)
+
 
 app.run()
