@@ -184,10 +184,14 @@ class Videos_reader():
             cap.release() 
 
 
-def init_I2L(joint_num = 29,test_epoch = 12,mode = 'test'):
-
+def init_I2L(test_epoch = 12,mode = 'test'):
     # snapshot load
-    model_path = os.path.join(cfg.model_dir,'snapshot_demo.pth.tar')
+    if args.stage == 'sem_gcn':
+        joint_num = 17
+        model_path = os.path.join(cfg.model_dir,'second_hybrid_8.pth.tar')
+    else:
+        joint_num = 29
+        model_path = os.path.join(cfg.model_dir,'snapshot_demo.pth.tar')  
     assert os.path.exists(model_path), 'Cannot find model at ' + model_path
     print('Load checkpoint from {}'.format(model_path))
     I2L_model = get_model( joint_num, mode)
@@ -236,7 +240,11 @@ def get_fitness_action():
 
 def get_output(img_path):
     with torch.no_grad():
-        transform = transforms.ToTensor()
+        if args.stage=='sem_gcn':
+            normalize = transforms.Normalize(mean = [0.485,0.456,0.406], std  = [0.229,0.224,0.225])
+            transform = transforms.Compose([transforms.ToTensor(),normalize])
+        else:
+            transform = transforms.ToTensor()
         # prepare input image
         original_img = cv2.imread(img_path)
         original_img_height, original_img_width = original_img.shape[:2]
@@ -270,12 +278,13 @@ def get_output(img_path):
         
         # of shape (29,3) (17,3)
         I2L_joints = out['joint_coord_img'][0]
-        human36_joints = transform_joint_to_other_db(I2L_joints.cpu().numpy(),cfg.smpl_joints_name , cfg.joints_name)
-        Sem_joints = SemGCN_model(torch.from_numpy(human36_joints).cuda()[...,:2])[0]
-
-        return {'smpl_joint_coords':I2L_joints.tolist(),\
-                'human36_joint_coords':human36_joints.tolist(),\
-                'Sem_joints':Sem_joints.tolist() }
+        if args.stage == 'sem_gcn':
+            human36_joints = I2L_joints
+            return { 'human36_joint_coords':human36_joints.tolist()}
+        else:
+            human36_joints = transform_joint_to_other_db(I2L_joints.cpu().numpy(),cfg.smpl_joints_name , cfg.joints_name)
+            return {'smpl_joint_coords':I2L_joints.tolist(),\
+                'human36_joint_coords':human36_joints.tolist()}
 
 # as tested on my laptop, currently the speed of file upload and neural network process is nearly 1 frame per second. For pure neural network process, 19.84 seconds for 100 image   
 # also returns match_action name, the action estimate will be executed on front end, since it's little calculation and every user has their own different data record.
