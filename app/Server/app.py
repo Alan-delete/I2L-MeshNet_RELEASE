@@ -116,19 +116,30 @@ class Action_reader():
         self.standard_action.append(new_action)
     
     # user_action is assumed to be in form as {'human_joint_coords': , ...}
-    def get_frame_idx(self, user_action):
+    def get_frame_idx(self, user_action, action_choice):
         #result = {'action_idx':None, 'frame_idx':None}
         loss = Infinity
         threshold = Infinity
         first_idx = -1
         second_idx = -1
-        for action_idx, action in enumerate (self.standard_action) :
-            for frame_idx, action_per_frame in enumerate(action['data']):
+        # user choose action by himself
+        if (action_choice in self.action_list):
+            first_idx = self.action_list.index(action_choice)
+            for frame_idx, action_per_frame in enumerate(self.standard_action[first_idx]['data']):
                 temp_loss = self.get_loss(user_action, action_per_frame)
                 if temp_loss<loss and temp_loss < threshold:
                     loss = temp_loss
-                    first_idx = action_idx
                     second_idx = frame_idx
+        
+        # No selected action, scan all standard action
+        else:
+            for action_idx, action in enumerate (self.standard_action) :
+                for frame_idx, action_per_frame in enumerate(action['data']):
+                    temp_loss = self.get_loss(user_action, action_per_frame)
+                    if temp_loss<loss and temp_loss < threshold:
+                        loss = temp_loss
+                        first_idx = action_idx
+                        second_idx = frame_idx
         return first_idx,second_idx, loss
 
     def get_action_list(self):
@@ -288,7 +299,7 @@ def get_output(img_path):
 
 # as tested on my laptop, currently the speed of file upload and neural network process is nearly 1 frame per second. For pure neural network process, 19.84 seconds for 100 image   
 # also returns match_action name, the action estimate will be executed on front end, since it's little calculation and every user has their own different data record.
-@app.route("/imageUpload", methods = ['PUT','POST'])
+@app.route("/realTimeUpload", methods = ['PUT','POST'])
 def file_upload():
     # print("file uploaded, processing")
     data = None
@@ -307,7 +318,7 @@ def file_upload():
             filename = secure_filename(file.filename)
             file.save(os.path.join(store_folder, filename))
             data = get_output(os.path.join(store_folder, filename))
-            action_idx, frame_idx, loss = ar.get_frame_idx(data)
+            action_idx, frame_idx, loss = ar.get_frame_idx(data, request.values['action_choice'] )
             if action_idx == -1:
                 data['action_name'] = 'Loss exceeds threshold!'
                 data['loss'] = loss             
@@ -319,13 +330,37 @@ def file_upload():
             
     #return json of coordinates
     return jsonify(data)
-@app.route("/action_upload", methods = ['POST', 'PUT'])
+@app.route("/staticUpload", methods = ['POST', 'PUT'])
 def action_upload():
-    store_folder = os.path.join(app.static_folder, FITNESS_VIDEO_FOLDER)
-    new_action = []
-    if not os.path.exists(store_folder):
-        os.mkdir(store_folder)
+    data = None
+    if 'image' in request.files:
+        store_folder = os.path.join(app.static_folder, app.config['UPLOAD_FOLDER'])
+        if not os.path.exists(store_folder):
+            os.mkdir(store_folder)
+        print("upload success!")
+        file = request.files['image']
+        if file.filename == '':
+            flash('No selected file')
+            return redirect(request.url)
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            file.save(os.path.join(store_folder, filename))
+            data = get_output(os.path.join(store_folder, filename))
+            action_idx, frame_idx, loss = ar.get_frame_idx(data, 'defalut' )
+            if action_idx == -1:
+                data['action_name'] = 'Loss exceeds threshold!'
+                data['loss'] = loss             
+            else:
+                match_action, match_frame = vr.get_frame(action_idx, frame_idx)
+                data['action_name'] = match_action
+                data['loss'] = loss
+                cv2.imwrite(os.path.join(app.static_folder, 'match_frame.png') , match_frame)
+       
     if 'video' in request.files:
+        store_folder = os.path.join(app.static_folder, FITNESS_VIDEO_FOLDER)
+        if not os.path.exists(store_folder):
+            os.mkdir(store_folder)
+
         print('upload succeed!')
         file = request.files['video']
         if file.filename == '':
@@ -334,11 +369,12 @@ def action_upload():
 
         filename = secure_filename(file.filename)
         file.save(os.path.join(store_folder, filename))
-        new_action = get_action_json(os.path.join(store_folder, filename),I2L_model)    
-        ar.append(new_action)
+        data = get_action_json(os.path.join(store_folder, filename),I2L_model)    
+        ar.append(data)
         ar.save()
         vr.update(ar.get_action_list())
-    return jsonify(new_action)
+    
+    return jsonify(data)
 
 
 app.run()
