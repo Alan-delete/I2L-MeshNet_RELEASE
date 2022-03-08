@@ -22,11 +22,11 @@ form.addEventListener("submit",function(event){
         return
     }
     
-    let url = "";
-    let formData = new FormData()
+  let url = `${ngrok_url}staticUpload`;
+  let formData = new FormData();
     
     if (file.type == 'video/mp4'){
-	      url = `${ngrok_url}action_upload`
+
     	  formData.append('video', file)
 	
 	      let data = {
@@ -47,9 +47,9 @@ form.addEventListener("submit",function(event){
 	
 	
     else{
-	      url = `${ngrok_url}imageUpload`
+
     	  formData.append('image',file)
-    
+        formData.append('action_choice', document.getElementById("Action_Choice").value)
     
     	  let data = {
         method: 'POST',
