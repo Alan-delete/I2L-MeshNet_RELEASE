@@ -3,6 +3,7 @@ const d = new Date()
 let time = null
 let stopUpload = true
 let action_record = []
+let url = `${ngrok_url}realTimeUpload`
 import { update_skeleton} from './draw.js'
 
 let start_camera = document.querySelector("#start-camera")
@@ -117,11 +118,12 @@ function newUpload() {
 // use static image to simulate real-time process 
 function test_only() {
   let image = document.getElementById("form-image").files[0]
-  let formdata = new FormData()
-  formdata.append('image', image)
+  let formData = new FormData()
+  formData.append('image', image)
+  formData.append('action_choice', document.getElementById("Action_Choice").value)
   let data = {
     method: 'PUT',
-    body: formdata
+    body: formData
   }
   fetch(url, data).then(response => {
     return response.json()
@@ -248,6 +250,7 @@ function captureAndUpload() {
     console.log(imgFile)
     let formData = new FormData()
     formData.append('image', imgFile)
+    formData.append('action_choice', document.getElementById("Action_Choice").value)
     let data = {
           method: 'PUT',
           body: formData,
