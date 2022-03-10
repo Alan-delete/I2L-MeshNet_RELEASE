@@ -17,6 +17,12 @@ import torchvision.transforms as transforms
 from torch.nn.parallel.data_parallel import DataParallel
 import torch.backends.cudnn as cudnn
 from importlib import reload
+#FOR WINDOWS
+import mimetypes
+import platform
+if(platform.system()=='Windows'):
+    mimetypes.init()
+    mimetypes.add_type("application/javascript", ".js", True)
 
 UPLOAD_FOLDER = 'uploads'
 FITNESS_VIDEO_FOLDER = 'Fitness_video'
@@ -33,8 +39,9 @@ import utils
 root_dir =os.path.dirname( os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 main_dir = os.path.join(root_dir,'main')
 common_dir = os.path.join(root_dir,'common')
-sys.path.append(main_dir)
-sys.path.append(common_dir)
+#fix include path issue
+sys.path.insert(0,main_dir)
+sys.path.insert(0,common_dir)
 
 reload(utils)
 
