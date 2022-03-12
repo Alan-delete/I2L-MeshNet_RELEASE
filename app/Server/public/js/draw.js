@@ -1,6 +1,7 @@
 import * as THREE from 'https://cdn.skypack.dev/three@0.133.1';
 import { OrbitControls } from 'https://cdn.skypack.dev/three@0.133.1/examples/jsm/controls/OrbitControls.js';
 export { update_skeleton}
+const DEFAULT_TIMESTAMP = 1
 
 document.getElementById("form-image").onchange = evt => {
   let image = document.getElementById("form-image").files[0]
@@ -50,7 +51,7 @@ form.addEventListener("submit",function(event){
 
     	  formData.append('image',file)
         formData.append('action_choice', document.getElementById("Action_Choice").value)
-    
+        formData.append('timestamp',DEFAULT_TIMESTAMP)
     	  let data = {
         method: 'POST',
         body: formData

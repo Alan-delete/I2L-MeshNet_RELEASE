@@ -19,6 +19,7 @@ import torch.backends.cudnn as cudnn
 from importlib import reload
 #FOR WINDOWS
 import mimetypes
+import math
 import platform
 if(platform.system()=='Windows'):
     mimetypes.init()
@@ -31,6 +32,12 @@ ALLOWED_EXTENSIONS = {'png','jpg','jpeg','jfif'}
 # load YOLO5
 YOLO5_model = torch.hub.load('ultralytics/yolov5','yolov5m', pretrained=True)
 YOLO5_model.cuda()
+
+#DEFAULT SCORING DATA:
+DEFAULT_JOINTS = [[1,2,1,0],[5,3,6,8],[1,2,2,3],]
+DEFAULT_FPS = 24
+DEFAULT_ACCURACY = 10
+DEFAULT_ERROR = 20
 
 # There is 'utils' in YOLO which will conflict with local 'utils' module, we need to import and override utils 
 import utils
@@ -201,6 +208,69 @@ class Videos_reader():
             self.videos.append(video)
             cap.release() 
 
+class Scoring():
+    def __init__(self, action_list, json_name = 'comparison_data.json'):
+        self._json = json_name
+        json_file = os.path.join(app.static_folder, self._json) 
+        assert os.path.exists(json_file), 'Cannot find json file'
+        with open(json_file) as f:
+            self._scoring_data = json.load(f)
+        self._action_list = [ item['name'] for item in self._scoring_data]
+        if(self._action_list != action_list):
+            print("warning: action list from joint data and scoring data unmathces")
+            
+    def get_action_list(self):
+        return self._action_list
+    
+    def get_scoring_data(self):
+        return self._scoring_data
+    
+    def time_to_frame(self, action_index, timestamp):
+        return math.floor(int(self._scoring_data[action_index]['fps']) * float(timestamp))
+                
+    def append(self,name, version = 17, joints = DEFAULT_JOINTS, fps = DEFAULT_FPS, accuracy = DEFAULT_ACCURACY, error = DEFAULT_ERROR):
+        self._action_list.append(name)
+        new_scoring_data = {'name':name, 'version':version, 'joints':joints, 'fps': fps, 'accuracy': accuracy, 'error': error}
+        self._scoring_data.append(new_scoring_data)
+
+    def save(self):
+        path = os.path.join(app.static_folder, self._json)  
+        assert os.path.exists(path), 'Cannot find json file'
+        with open(path,'w') as f :
+            json.dump( self._scoring_data ,f)
+    
+    #TODO: main calculating function
+    def score(self,user_action,action_index,recorded_action,predicted_action):
+        scoring_data = self._scoring_data[action_index]
+        #print(scoring_data)
+        joints = np.array(scoring_data['joints'])
+        recorded_error, predicted_error = [],[]
+        for joint in joints:
+            # print(joint)
+            recorded_error.append(self.score_joint(joint,user_action,recorded_action))
+            predicted_error.append(self.score_joint(joint,user_action,predicted_action))
+        return recorded_error, predicted_error
+    
+    def score_joint(self,joint,user_action,standard_action):
+        user_bones = self.get_bones(joint, user_action)
+        standard_bones = self.get_bones(joint, standard_action)
+        
+        user_dot = np.dot(user_bones[0],user_bones[1])
+        standard_dot = np.dot(standard_bones[0],standard_bones[1])
+        
+        user_angle = math.fabs(np.arccos(np.clip(user_dot, -1.0, 1.0)) / math.pi * 180 )
+        standard_angle = math.fabs(np.arccos(np.clip(standard_dot, -1.0, 1.0)) / math.pi * 180 )
+        user_error = math.fabs(user_angle - standard_angle)
+        return user_error
+        
+    def get_bones(self, joint, action):
+        bone1 = action[joint[0]] - action[joint[1]]
+        bone1 = bone1 / np.linalg.norm(bone1)
+        bone2 = action[joint[2]] - action[joint[3]]
+        bone2 = bone2 / np.linalg.norm(bone2)
+        return  [bone1, bone2]
+    
+    #TODO: reload function
 
 def init_I2L(test_epoch = 12,mode = 'test'):
     # snapshot load
@@ -232,6 +302,7 @@ def init_semGCN(test_epoch = 1):
 
 ar = Action_reader()
 vr = Videos_reader(action_list = ar.get_action_list(), video_dir= FITNESS_VIDEO_FOLDER)
+sc = Scoring(action_list = ar.get_action_list())
 I2L_model = init_I2L()
 SemGCN_model = init_semGCN()
 
@@ -330,9 +401,18 @@ def file_upload():
                 data['action_name'] = 'Loss exceeds threshold!'
                 data['loss'] = loss             
             else:
+                #TODO: obtain the predicted and recorded action's joint data
                 match_action, match_frame = vr.get_frame(action_idx, frame_idx)
                 data['action_name'] = match_action
                 data['loss'] = loss
+                predicted_action = np.array(ar[action_idx]['data'][frame_idx]['human36_joint_coords'])
+                if(not 'timestamp' in request.values):
+                    print("timestamp not found")
+                    recorded_action = predicted_action
+                else:
+                    recorded_frame = sc.time_to_frame(action_idx,request.values['timestamp'])
+                    recorded_action = np.array(ar[action_idx]['data'][recorded_frame]['human36_joint_coords'])
+                data['action_accuracy'] = sc.score(np.array(data['human36_joint_coords']),action_idx,recorded_action,predicted_action)
                 cv2.imwrite(os.path.join(app.static_folder, 'match_frame.png') , match_frame)
             
     #return json of coordinates
@@ -361,6 +441,14 @@ def action_upload():
                 match_action, match_frame = vr.get_frame(action_idx, frame_idx)
                 data['action_name'] = match_action
                 data['loss'] = loss
+                predicted_action = np.array(ar[action_idx]['data'][frame_idx]['human36_joint_coords'])
+                if(not 'timestamp' in request.values):
+                    print("timestamp not found")
+                    recorded_action = predicted_action
+                else:
+                    recorded_frame = sc.time_to_frame(action_idx,request.values['timestamp'])
+                    recorded_action = np.array(ar[action_idx]['data'][recorded_frame]['human36_joint_coords'])
+                data['action_accuracy'] = sc.score(np.array(data['human36_joint_coords']),action_idx,recorded_action,predicted_action)
                 cv2.imwrite(os.path.join(app.static_folder, 'match_frame.png') , match_frame)
        
     if 'video' in request.files:

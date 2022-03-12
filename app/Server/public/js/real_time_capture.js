@@ -1,4 +1,5 @@
 const INTERVAL = 500
+const DEFAULT_TIMESTAMP = 1 //
 const d = new Date()
 let time = null
 let stopUpload = true
@@ -10,6 +11,9 @@ let start_camera = document.querySelector("#start-camera")
 let video = document.querySelector("#video")
 let start_capture = document.querySelector('#start-capture')
 let captured_image = document.querySelector('#captured-image')
+
+let actionCounter = 0
+let accuracyRecord = []
 
 //start camera display
 start_camera.addEventListener('click', async function(){
@@ -85,6 +89,8 @@ document.getElementById("stop").addEventListener("click",stopContinuousUpload)
 function startContinuousUpload() {
     result.style.display = 'block';
     action_record = []
+    actionCounter = 0
+    accuracyRecord = []
     newUpload()
     stopUpload = false
 }
@@ -121,6 +127,7 @@ function test_only() {
   let formData = new FormData()
   formData.append('image', image)
   formData.append('action_choice', document.getElementById("Action_Choice").value)
+  formData.append('timestamp',DEFAULT_TIMESTAMP)
   let data = {
     method: 'PUT',
     body: formData
@@ -138,14 +145,13 @@ function test_only() {
             'loss': res['loss']
           })                
         }
-
-
           //update_skeleton(res['Sem_joints'], Sem_skeleton); 
       // action recognition
       let dict = new Object()
       let max_value = 0.00001
       let predicted_action = ''
       let total_loss = 0
+      accuracyRecord.push(res.action_accuracy)
         if (action_record.length > 10) {
 
             for (let i = 2; i < action_record.length-2; i++) {
@@ -172,11 +178,11 @@ function test_only() {
               total_loss += action_record[i]['loss']
           }
           Average_Score.text = total_loss/max_value
-          }
+          actionCounter++
+      }
       if (!stopUpload)
         newUpload()
       else {
-
         let tr = document.createElement("tr")
 			  let td_1 = document.createElement("td")
 			  td_1.appendChild(document.createTextNode(predicted_action))
@@ -190,12 +196,12 @@ function test_only() {
         record.append(tr)
         Action_Name.text = ''
         Average_Score.text = ''
+        console.log(accuracyRecord)
       }
+
     })
     .then(console.log("test succeed"))
     .catch(err => console.log(err))
-
-  
 }
 
 
@@ -251,6 +257,7 @@ function captureAndUpload() {
     let formData = new FormData()
     formData.append('image', imgFile)
     formData.append('action_choice', document.getElementById("Action_Choice").value)
+    formData.append('timestamp',DEFAULT_TIMESTAMP)
     let data = {
           method: 'PUT',
           body: formData,
@@ -309,24 +316,24 @@ function captureAndUpload() {
         }
           
 
-          //check whether have decided to stop uploading
-          if(!stopUpload){
-            newUpload()
-          }
-          else {
-            let tr = document.createElement("tr");
-            let td_1 = document.createElement("td");
-            td_1.appendChild(document.createTextNode(predicted_action));
-            let td_2 = document.createElement("td");
-            td_2.appendChild(document.createTextNode(total_loss / max_value));
-            let td_3 = document.createElement("td");
-            td_3.appendChild(document.createTextNode('NA'));
-            tr.appendChild(td_1);
-            tr.appendChild(td_2);
-            tr.appendChild(td_3);
-            record.append(tr);
-            Action_Name.text = ''
-            Average_Score.text = ''
+        //check whether have decided to stop uploading
+        if(!stopUpload){
+          newUpload()
+        }
+        else {
+          let tr = document.createElement("tr");
+          let td_1 = document.createElement("td");
+          td_1.appendChild(document.createTextNode(predicted_action));
+          let td_2 = document.createElement("td");
+          td_2.appendChild(document.createTextNode(total_loss / max_value));
+          let td_3 = document.createElement("td");
+          td_3.appendChild(document.createTextNode('NA'));
+          tr.appendChild(td_1);
+          tr.appendChild(td_2);
+          tr.appendChild(td_3);
+          record.append(tr);
+          Action_Name.text = ''
+          Average_Score.text = ''
       }
       })
       .then(console.log("succeed here!"))
