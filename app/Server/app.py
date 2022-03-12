@@ -61,7 +61,8 @@ from utils.preprocessing import process_bbox,generate_patch_image,get_action_jso
 app = Flask(__name__ ,static_folder = 'public',static_url_path='/public')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 CORS(app)
-run_with_ngrok(app)   
+if(platform.system()!='Windows'):
+    run_with_ngrok(app)   
 cudnn.benchmark = True
 
 
@@ -410,7 +411,7 @@ def file_upload():
                     print("timestamp not found")
                     recorded_action = predicted_action
                 else:
-                    recorded_frame = sc.time_to_frame(action_idx,request.values['timestamp'])
+                    recorded_frame = sc.time_to_frame(action_idx,request.values['timestamp']) % len(ar[action_idx]['data'])
                     recorded_action = np.array(ar[action_idx]['data'][recorded_frame]['human36_joint_coords'])
                 data['action_accuracy'] = sc.score(np.array(data['human36_joint_coords']),action_idx,recorded_action,predicted_action)
                 cv2.imwrite(os.path.join(app.static_folder, 'match_frame.png') , match_frame)

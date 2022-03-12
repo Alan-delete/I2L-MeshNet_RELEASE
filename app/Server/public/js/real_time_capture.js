@@ -15,6 +15,8 @@ let captured_image = document.querySelector('#captured-image')
 let actionCounter = 0
 let accuracyRecord = []
 
+let startingTime
+
 //start camera display
 start_camera.addEventListener('click', async function(){
     if (navigator.mediaDevices.getUserMedia || navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia) {
@@ -92,6 +94,7 @@ function startContinuousUpload() {
     actionCounter = 0
     accuracyRecord = []
     newUpload()
+    startingTime = Date.now()
     stopUpload = false
 }
 
@@ -127,7 +130,9 @@ function test_only() {
   let formData = new FormData()
   formData.append('image', image)
   formData.append('action_choice', document.getElementById("Action_Choice").value)
-  formData.append('timestamp',DEFAULT_TIMESTAMP)
+  let timestamp = (Date.now() - startingTime)/1000
+  console.log(`timestamp is ${timestamp}`)
+  formData.append('timestamp',timestamp)
   let data = {
     method: 'PUT',
     body: formData
