@@ -14,7 +14,7 @@ let captured_image = document.querySelector('#captured-image')
 
 let actionCounter = 0
 let accuracyRecord = []
-let one_click_record = []
+let one_click_joint_record = []
 let startingTime
 
 //start camera display
@@ -117,7 +117,7 @@ function startContinuousUpload() {
     action_record = []
     actionCounter = 0
     accuracyRecord = []
-    one_click_record = []
+    one_click_joint_record = []
     newUpload()
     startingTime = Date.now()
     stopUpload = false
@@ -188,7 +188,7 @@ function test_only() {
       let predicted_action = ''
       let total_loss = 0
       // need to extract data from res
-      let replay_data = one_click_record;
+      let replay_data = one_click_joint_record;
       accuracyRecord.push(res.action_accuracy)
         if (action_record.length > 10) {
 
@@ -318,9 +318,11 @@ function captureAndUpload() {
       .then( res => {
           console.log(res)
 
+          // display result should be one_click_joint_record last element append res[smpl_joint_coords]
           update_skeleton(res['smpl_joint_coords'], I2L_skeleton);
           //update_skeleton(res['human36_joint_coords'], human36_skeleton);
 
+          //one_click_joint_record append res[smpl_joint_coords]
 
         if (action_record[0]['action_name'] != 'Loss exceeds threshold!') {
           action_record.push({
@@ -337,7 +339,7 @@ function captureAndUpload() {
         let predicted_action = ''
         let total_loss = 0
         // need to extract data from res
-        let replay_data = res;
+        let replay_data = one_click_joint_record;
         if (action_record.length > 10) {
 
           for (let i = 2; i < action_record.length-2; i++) {
