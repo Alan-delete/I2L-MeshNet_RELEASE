@@ -14,7 +14,7 @@ let captured_image = document.querySelector('#captured-image')
 
 let actionCounter = 0
 let accuracyRecord = []
-
+let one_click_record = []
 let startingTime
 
 //start camera display
@@ -93,6 +93,7 @@ function startContinuousUpload() {
     action_record = []
     actionCounter = 0
     accuracyRecord = []
+    one_click_record = []
     newUpload()
     startingTime = Date.now()
     stopUpload = false
@@ -148,7 +149,13 @@ function test_only() {
           action_record.push({
             'action_name': res['action_name'],
             'loss': res['loss']
-          })                
+          })
+          // need to improve for a batch of image upload
+          one_click_record.push({
+            'smpl_coord': res['smpl_joint_coords'],
+            'timestamp': timestamp
+
+          })
         }
           //update_skeleton(res['Sem_joints'], Sem_skeleton); 
       // action recognition
@@ -156,6 +163,8 @@ function test_only() {
       let max_value = 0.00001
       let predicted_action = ''
       let total_loss = 0
+      // need to extract data from res
+      let replay_data = one_click_record;
       accuracyRecord.push(res.action_accuracy)
         if (action_record.length > 10) {
 
@@ -194,10 +203,19 @@ function test_only() {
 			  let td_2 = document.createElement("td")
 			  td_2.appendChild(document.createTextNode(total_loss/max_value))
 			  let td_3 = document.createElement("td")
-			  td_3.appendChild(document.createTextNode('NA'))
+        td_3.appendChild(document.createTextNode('NA'))
+        let td_4 = document.createElement("td");
+			  let butt = document.createElement("button");
+        td_4.appendChild(butt);
+        butt.className = "btn btn-primary"
+			  // use function closure to bind the block scpoed record_data to current one 
+			  butt.addEventListener('click', ()=>{
+				  console.log(replay_data)
+			  });
 			  tr.appendChild(td_1)
 			  tr.appendChild(td_2)
-			  tr.appendChild(td_3)
+        tr.appendChild(td_3)
+        tr.appendChild(td_4);
         record.append(tr)
         Action_Name.text = ''
         Average_Score.text = ''
@@ -292,6 +310,8 @@ function captureAndUpload() {
         let max_value = 0.00001
         let predicted_action = ''
         let total_loss = 0
+        // need to extract data from res
+        let replay_data = res;
         if (action_record.length > 10) {
 
           for (let i = 2; i < action_record.length-2; i++) {
@@ -333,9 +353,18 @@ function captureAndUpload() {
           td_2.appendChild(document.createTextNode(total_loss / max_value));
           let td_3 = document.createElement("td");
           td_3.appendChild(document.createTextNode('NA'));
+          let td_4 = document.createElement("td");
+			    let butt = document.createElement("button");
+          td_4.appendChild(butt);
+          butt.className = "btn btn-primary"
+			    // use function closure to bind the block scpoed record_data to current one 
+			    butt.addEventListener('click', ()=>{
+				    console.log(replay_data)
+			    });
           tr.appendChild(td_1);
           tr.appendChild(td_2);
           tr.appendChild(td_3);
+          tr.appendChild(td_4);
           record.append(tr);
           Action_Name.text = ''
           Average_Score.text = ''
