@@ -26,6 +26,27 @@ start_camera.addEventListener('click', async function(){
     }
 })
 
+function replay(record_data){
+    let start = Date.now();
+    let timerId = setInterval(()=>{
+        let cur_time_diff = (Date.now() - start);
+        if (cur_time_diff >= (record_data[record_data.length-1].timestamp - record_data[0].timestamp)){
+            clearInterval(timerId);
+        }
+        else{
+            for (let i = 1; i< record_data.length; i++){
+	        let time_diff = record_data[i].timestamp - record_data[0].timestamp
+	        if (time_diff >= cur_time_diff){
+	            let coe = (time_diff - cur_time_diff)/(record_data[i].timestamp - record_data[i-1].timestamp);
+	            let new_skeleton = record_data[i]['smpl_joint_coords'].map( (inner, row_idx)=>inner.map( (ele, col_idx)=> coe * ele + (1-coe) * record_data[i-1]['smpl_joint_coords'][row_idx][col_idx] ) )
+	            // update new_skeleton 
+	            break;
+	        }
+            }
+        }
+    }, 1000/30)
+}
+
 //for above function
 function getUserMedia(constraints, success, error){
     if (navigator.mediaDevices.getUserMedia) {
