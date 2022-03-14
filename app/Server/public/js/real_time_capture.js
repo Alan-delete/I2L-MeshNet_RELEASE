@@ -26,6 +26,7 @@ start_camera.addEventListener('click', async function(){
     }
 })
 
+// currently 30 fps
 function replay(record_data){
     let start = Date.now();
     let timerId = setInterval(()=>{
@@ -38,8 +39,10 @@ function replay(record_data){
 	        let time_diff = record_data[i].timestamp - record_data[0].timestamp
 	        if (time_diff >= cur_time_diff){
 	            let coe = (time_diff - cur_time_diff)/(record_data[i].timestamp - record_data[i-1].timestamp);
+		    // linear interpolation
 	            let new_skeleton = record_data[i]['smpl_joint_coords'].map( (inner, row_idx)=>inner.map( (ele, col_idx)=> coe * ele + (1-coe) * record_data[i-1]['smpl_joint_coords'][row_idx][col_idx] ) )
 	            // update new_skeleton 
+		    update_skeleton(new_skeleton, I2L_skeleton)
 	            break;
 	        }
             }
@@ -231,7 +234,9 @@ function test_only() {
         butt.className = "btn btn-primary"
 			  // use function closure to bind the block scpoed record_data to current one 
 			  butt.addEventListener('click', ()=>{
+				  // replay data should be in form as [{'smpl_joint_coords'}: [[x,y,z],[x,y,z], ...] , 'timestamp': } ...  ]
 				  console.log(replay_data)
+				  //replay(replay_data)
 			  });
 			  tr.appendChild(td_1)
 			  tr.appendChild(td_2)
@@ -380,7 +385,9 @@ function captureAndUpload() {
           butt.className = "btn btn-primary"
 			    // use function closure to bind the block scpoed record_data to current one 
 			    butt.addEventListener('click', ()=>{
-				    console.log(replay_data)
+				  // replay data should be in form as [{'smpl_joint_coords'}: [[x,y,z],[x,y,z], ...] , 'timestamp': } ...  ]
+				  console.log(replay_data)
+				  //replay(replay_data)
 			    });
           tr.appendChild(td_1);
           tr.appendChild(td_2);
