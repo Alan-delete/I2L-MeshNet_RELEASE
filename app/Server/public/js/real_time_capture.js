@@ -16,6 +16,7 @@ let accuracyRecord = []
 let one_click_joint_record = []
 let startingTime
 let imgList = []
+let timestampList = []
 
 //const and var related to continuous image appending
 const IMAGE_BATCH = 8
@@ -127,9 +128,10 @@ function startContinuousUpload() {
     accuracyRecord = []
     one_click_joint_record = []
     startingTime = Date.now()
+    timestampList = []
     imgList = []
     stopUpload = false
-    newImgTimer = setInterval(appendNewImage,IMAGE_INTERVAL * 1000,'File',imgList)
+    newImgTimer = setInterval(appendNewImage,IMAGE_INTERVAL * 1000,'File')
     setTimeout(newUpload,IMAGE_INTERVAL*IMAGE_BATCH*1000 + 100)
 }
 
@@ -150,12 +152,12 @@ function newUpload() {
 function test_only() {
   let formData = new FormData()
   sliceImage(formData)
+  //placeholder, delete later
+  let timestamp =  Date.now()
   formData.append('action_choice', document.getElementById("Action_Choice").value)
   //console.log("current time: " + Date.now())
   //console.log("Starting time: " + startingTime)
-  let timestamp = (Date.now() - startingTime)/1000
   //console.log(`timestamp is ${timestamp}`)
-  formData.append('timestamp',timestamp)
   let data = {
     method: 'PUT',
     body: formData
@@ -180,7 +182,7 @@ function test_only() {
 
           })
         }
-          //update_skeleton(res['Sem_joints'], Sem_skeleton); 
+      //update_skeleton(res['Sem_joints'], Sem_skeleton); 
       // action recognition
       let dict = new Object()
       let max_value = 0.00001
@@ -398,14 +400,17 @@ function captureAndUpload() {
 const sliceImage = (formData) => {
   //copy the imgList
   let uploadImgList = [...imgList]
+  let uploadTimestampList = [...timestampList]
   //clear the orignial imgList so it doesn't affect the img capturing
   imgList = []
+  timestampList = []
   //the slice interval is larger than 1 due to the setting of IMAGE_BATCH AND INTERVAL
   let sliceInterval = uploadImgList.length / IMAGE_BATCH
   //append img to the formData
-  console.log(`captured ${uploadImgList.length} images between uploads`)
+  console.log(`captured ${uploadImgList.length} images and ${uploadTimestampList.length} timestamps between uploads`)
   for(var i=0; i < uploadImgList.length; i+=sliceInterval){
     formData.append('image',uploadImgList[Math.round(i)])
+    formData.append('timestamp',uploadTimestampList[Math.round(i)])
   }
   return formData
 }
@@ -438,6 +443,7 @@ const getNewImage = (source) => {
 const appendNewImage = (source) => {
     let img = getNewImage(source)
     imgList.push(img)
+    timestampList.push(Date.now())
 }
 
 
