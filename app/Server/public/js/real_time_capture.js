@@ -168,21 +168,32 @@ function test_only() {
   })
     .then(res => {
       console.log(res)
-      update_skeleton(res['smpl_joint_coords'], I2L_skeleton);
 
-        if (res['action_name'] != 'Loss exceeds threshold!') {
+      if (one_click_joint_record.length != 0) {
+        let last_frame = one_click_joint_record[one_click_joint_record.length - 1]
+        replay(res.splice(0, 0, last_frame))
+      }
+      else {
+         replay(res)
+      }
+
+
+      //update_skeleton(res['smpl_joint_coords'], I2L_skeleton);
+      for (let i = 0; i < res.length; i++) {
+        if (res[i]['action_name'] != 'Loss exceeds threshold!') {
           action_record.push({
-            'action_name': res['action_name'],
-            'loss': res['loss']
+            'action_name': res[i]['action_name'],
+            'loss': res[i]['loss']
+
           })
           // need to improve for a batch of image upload
           one_click_joint_record.push({
-            'smpl_coord': res['smpl_joint_coords'],
-            'timestamp': timestamp
-
+            'smpl_joint_coords': res[i]['smpl_joint_coords'],
+            'timestamp': res[i]['timestamp']
           })
+          accuracyRecord.push(res[i].action_accuracy)
         }
-      //update_skeleton(res['Sem_joints'], Sem_skeleton); 
+      }
       // action recognition
       let dict = new Object()
       let max_value = 0.00001
@@ -190,7 +201,7 @@ function test_only() {
       let total_loss = 0
       // need to extract data from res
       let replay_data = one_click_joint_record;
-      accuracyRecord.push(res.action_accuracy)
+
         if (action_record.length > 10) {
 
             for (let i = 2; i < action_record.length-2; i++) {
@@ -225,6 +236,7 @@ function test_only() {
       }
         
       else {
+        let replay_data = one_click_joint_record
         let tr = document.createElement("tr")
 			  let td_1 = document.createElement("td")
 			  td_1.appendChild(document.createTextNode(predicted_action))
@@ -240,7 +252,7 @@ function test_only() {
 			  butt.addEventListener('click', ()=>{
 				  // replay data should be in form as [{'smpl_joint_coords'}: [[x,y,z],[x,y,z], ...] , 'timestamp': } ...  ]
 				  console.log(replay_data)
-				  //replay(replay_data)
+				  replay(replay_data)
 			  });
 			  tr.appendChild(td_1)
 			  tr.appendChild(td_2)
