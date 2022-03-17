@@ -474,3 +474,7 @@ def action_upload():
 
 
 app.run()
+
+#filestr = request.files['image'].read()
+#npimg = np.frombuffer(filestr, numpy.uint8)
+#img = cv2.imdecode(npimg, cv2.IMREAD_COLOR)
