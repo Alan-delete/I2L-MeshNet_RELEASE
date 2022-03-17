@@ -227,7 +227,7 @@ class Scoring():
         return self._scoring_data
     
     def time_to_frame(self, action_index, timestamp):
-        return math.floor(int(self._scoring_data[action_index]['fps']) * float(timestamp/1000))
+        return math.floor(int(self._scoring_data[action_index]['fps']) * timestamp/1000)
                 
     def append(self,name, version = 17, joints = DEFAULT_JOINTS, fps = DEFAULT_FPS, accuracy = DEFAULT_ACCURACY, error = DEFAULT_ERROR):
         self._action_list.append(name)
@@ -397,6 +397,7 @@ def file_upload():
     if 'image' in request.files:
         print("upload success!")
         file = request.files.getlist('image')
+        timestamp = np.array(list(map(float, request.values.getlist('timestamp'))))
         if(len(file)>1):
             file = file[0]
             print("this is a list")
@@ -410,7 +411,7 @@ def file_upload():
             imgs = [cv2.imdecode(npimg, cv2.IMREAD_COLOR) for i in range(8)]
             
             data = get_output(imgs)
-            for data_per_frame in data:
+            for index,data_per_frame in enumerate(data):
                 action_idx, frame_idx, loss = ar.get_frame_idx(data_per_frame, request.values['action_choice'] )
                 if action_idx == -1:
                     data_per_frame['action_name'] = 'Loss exceeds threshold!'
@@ -425,9 +426,10 @@ def file_upload():
                         print("timestamp not found")
                         recorded_action = predicted_action
                     else:
-                        recorded_frame = sc.time_to_frame(action_idx,request.values['timestamp']) % len(ar[action_idx]['data'])
+                        recorded_frame = sc.time_to_frame(action_idx,timestamp[index]) % len(ar[action_idx]['data'])
                         recorded_action = np.array(ar[action_idx]['data'][recorded_frame]['human36_joint_coords'])
                     data_per_frame['action_accuracy'] = sc.score(np.array(data_per_frame['human36_joint_coords']),action_idx,recorded_action,predicted_action)
+                    data_per_frame['timestamp'] = timestamp[index]
                     #cv2.imwrite(os.path.join(app.static_folder, 'match_frame.png') , match_frame)
             
     #return json of coordinates
