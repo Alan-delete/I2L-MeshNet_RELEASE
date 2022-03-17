@@ -443,7 +443,7 @@ const getNewImage = (source) => {
 const appendNewImage = (source) => {
     let img = getNewImage(source)
     imgList.push(img)
-    timestampList.push(Date.now())
+    timestampList.push(Date.now()-startingTime)
 }
 
 

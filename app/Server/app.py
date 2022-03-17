@@ -227,7 +227,7 @@ class Scoring():
         return self._scoring_data
     
     def time_to_frame(self, action_index, timestamp):
-        return math.floor(int(self._scoring_data[action_index]['fps']) * float(timestamp))
+        return math.floor(int(self._scoring_data[action_index]['fps']) * float(timestamp/1000))
                 
     def append(self,name, version = 17, joints = DEFAULT_JOINTS, fps = DEFAULT_FPS, accuracy = DEFAULT_ACCURACY, error = DEFAULT_ERROR):
         self._action_list.append(name)
