@@ -422,12 +422,8 @@ def file_upload():
                     data_per_frame['action_name'] = match_action
                     data_per_frame['loss'] = loss
                     predicted_action = np.array(ar[action_idx]['data'][frame_idx]['human36_joint_coords'])
-                    if(not 'timestamp' in request.values):
-                        print("timestamp not found")
-                        recorded_action = predicted_action
-                    else:
-                        recorded_frame = sc.time_to_frame(action_idx,timestamp[index]) % len(ar[action_idx]['data'])
-                        recorded_action = np.array(ar[action_idx]['data'][recorded_frame]['human36_joint_coords'])
+                    recorded_frame = sc.time_to_frame(action_idx,timestamp[index]) % len(ar[action_idx]['data'])
+                    recorded_action = np.array(ar[action_idx]['data'][recorded_frame]['human36_joint_coords'])
                     data_per_frame['action_accuracy'] = sc.score(np.array(data_per_frame['human36_joint_coords']),action_idx,recorded_action,predicted_action)
                     data_per_frame['timestamp'] = timestamp[index]
                     #cv2.imwrite(os.path.join(app.static_folder, 'match_frame.png') , match_frame)
