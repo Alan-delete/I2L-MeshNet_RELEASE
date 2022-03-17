@@ -1,4 +1,3 @@
-const INTERVAL = 500
 const DEFAULT_TIMESTAMP = 1 //
 const d = new Date()
 let time = null
@@ -16,8 +15,14 @@ let actionCounter = 0
 let accuracyRecord = []
 let one_click_joint_record = []
 let startingTime
+let imgList = []
 
+//const and var related to continuous image appending
 const IMAGE_BATCH = 8
+const EST_DELAY = 1.5
+const IMAGE_NUM_OVERHEAD = 2
+const IMAGE_INTERVAL = EST_DELAY/IMAGE_BATCH/IMAGE_NUM_OVERHEAD
+let newImgTimer = null
 
 //start camera display
 start_camera.addEventListener('click', async function(){
@@ -114,61 +119,48 @@ start_capture.addEventListener('click',function(){
 document.getElementById("start").addEventListener("click",startContinuousUpload)
 document.getElementById("stop").addEventListener("click",stopContinuousUpload)
 
+//
 function startContinuousUpload() {
     result.style.display = 'block';
     action_record = []
     actionCounter = 0
     accuracyRecord = []
     one_click_joint_record = []
-    newUpload()
     startingTime = Date.now()
+    imgList = []
     stopUpload = false
+    newImgTimer = setInterval(appendNewImage,IMAGE_INTERVAL * 1000,'File',imgList)
+    setTimeout(newUpload,IMAGE_INTERVAL*IMAGE_BATCH*1000 + 100)
 }
 
 function stopContinuousUpload() {
     result.style.display = 'none';
     time = null
     stopUpload = true
+    clearInterval(newImgTimer)
     console.log(action_record)
 
 }
 
 function newUpload() {
-    setTimeout(test_only, INTERVAL )
-    //setTimeout(captureAndUpload, INTERVAL )
-    
-    /*
-    if (time == null){
-        time = d.getTime()
-        //here goes the function to capture and upload a new image
-    }else if (d.getTime() - time >= INTERVAL){
-        //here goes the function to capture and upload a new image
-        stopContinuousUpload()
-    }else{
-        setTimeout(captureAndUpload, INTERVAL - d.getTime() + time)
-    }
-    */
-    
+    test_only()
 }
 
 // use static image to simulate real-time process 
 function test_only() {
-  let image = document.getElementById("form-image").files[0]
   let formData = new FormData()
-  for(let i = 0; i < 8; i++){
-    formData.append('image', image)
-  }
-  for (var pair of formData.entries()) {
-    console.log(pair[0]+ ', ' + pair[1]); 
-  }
+  sliceImage(formData)
   formData.append('action_choice', document.getElementById("Action_Choice").value)
+  //console.log("current time: " + Date.now())
+  //console.log("Starting time: " + startingTime)
   let timestamp = (Date.now() - startingTime)/1000
-  console.log(`timestamp is ${timestamp}`)
+  //console.log(`timestamp is ${timestamp}`)
   formData.append('timestamp',timestamp)
   let data = {
     method: 'PUT',
     body: formData
   }
+  let uploadTime = Date.now()
   fetch(url, data).then(response => {
     return response.json()
   })
@@ -225,8 +217,11 @@ function test_only() {
           Average_Score.text = total_loss/max_value
           actionCounter++
       }
-      if (!stopUpload)
+      if (!stopUpload){
+        console.log("single upload time elapsed: " + (Date.now() - uploadTime)/1000)
         newUpload()
+      }
+        
       else {
         let tr = document.createElement("tr")
 			  let td_1 = document.createElement("td")
@@ -295,20 +290,8 @@ function dataURItoBlob(dataURI) {
 
 
 function captureAndUpload() {
-    //capture img from video
-    captured_image.getContext('2d').drawImage(video,0,0,captured_image.width,captured_image.height);
-    //get img data
-    let imageData = captured_image.toDataURL("image/png")
-    //convert img data into img source
-    let imgStr = imageData.substr(22)
-    //create new img file from img source
-    let img = new Image();
-    img.src = imgStr
-    //redraw image from the newly created file
-    captured_image.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
-
-    let imgBlob = dataURItoBlob(imageData)
-    let imgFile = new File([imgBlob], "image.png");
+    let imgFile = getNewImage('Capture')
+    
     console.log(imgFile)
     let formData = new FormData()
     formData.append('image', imgFile)
@@ -409,5 +392,53 @@ function captureAndUpload() {
       })
       .then(console.log("succeed here!"))
       .catch(error => console.log(error))
-
 }
+
+//a more direct way to slice image is to directly append the image to fordata
+const sliceImage = (formData) => {
+  //copy the imgList
+  let uploadImgList = [...imgList]
+  //clear the orignial imgList so it doesn't affect the img capturing
+  imgList = []
+  //the slice interval is larger than 1 due to the setting of IMAGE_BATCH AND INTERVAL
+  let sliceInterval = uploadImgList.length / IMAGE_BATCH
+  //append img to the formData
+  console.log(`captured ${uploadImgList.length} images between uploads`)
+  for(var i=0; i < uploadImgList.length; i+=sliceInterval){
+    formData.append('image',uploadImgList[Math.round(i)])
+  }
+  return formData
+}
+
+const getNewImage = (source) => {
+  let imgFile
+  if(source == 'File'){
+    imgFile = document.getElementById("form-image").files[0]
+  }else if(source == 'Capture'){
+    //capture img from video
+    captured_image.getContext('2d').drawImage(video,0,0,captured_image.width,captured_image.height);
+    //get img data
+    let imageData = captured_image.toDataURL("image/png")
+    //convert img data into img source
+    let imgStr = imageData.substr(22)
+    //create new img file from img source
+    let img = new Image();
+    img.src = imgStr
+    //redraw image from the newly created file
+    captured_image.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
+
+    let imgBlob = dataURItoBlob(imageData)
+    imgFile = new File([imgBlob], "image.png");
+  }
+
+  return imgFile
+}
+//append a new image to the pending upload list
+//param source identifies where the image comes from
+const appendNewImage = (source) => {
+    let img = getNewImage(source)
+    imgList.push(img)
+}
+
+
+
