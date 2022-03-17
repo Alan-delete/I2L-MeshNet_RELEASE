@@ -17,6 +17,8 @@ let accuracyRecord = []
 let one_click_joint_record = []
 let startingTime
 
+const IMAGE_BATCH = 8
+
 //start camera display
 start_camera.addEventListener('click', async function(){
     if (navigator.mediaDevices.getUserMedia || navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia) {
@@ -153,7 +155,12 @@ function newUpload() {
 function test_only() {
   let image = document.getElementById("form-image").files[0]
   let formData = new FormData()
-  formData.append('image', image)
+  for(let i = 0; i < 8; i++){
+    formData.append('image', image)
+  }
+  for (var pair of formData.entries()) {
+    console.log(pair[0]+ ', ' + pair[1]); 
+  }
   formData.append('action_choice', document.getElementById("Action_Choice").value)
   let timestamp = (Date.now() - startingTime)/1000
   console.log(`timestamp is ${timestamp}`)
@@ -175,7 +182,7 @@ function test_only() {
             'loss': res['loss']
           })
           // need to improve for a batch of image upload
-          one_click_record.push({
+          one_click_joint_record.push({
             'smpl_coord': res['smpl_joint_coords'],
             'timestamp': timestamp
 
