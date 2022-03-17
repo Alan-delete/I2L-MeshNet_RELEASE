@@ -389,7 +389,10 @@ def file_upload():
     # todo alt: directly pass the file to NN api
     if 'image' in request.files:
         print("upload success!")
-        file = request.files['image']
+        file = request.files.getlist('image')
+        if(len(file)>1):
+            file = file[0]
+            print("this is a list")
         if file.filename == '':
             flash('No selected file')
             return redirect(request.url)
