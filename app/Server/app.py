@@ -131,7 +131,7 @@ class Action_reader():
         self.standard_action.append(new_action)
     
     # user_action is assumed to be in form as {'human_joint_coords': , ...}
-    def get_frame_idx(self, user_action, action_choice):
+    def get_frame_idx(self, user_action, action_choice = 'default'):
         #result = {'action_idx':None, 'frame_idx':None}
         loss = Infinity
         threshold = Infinity
@@ -328,53 +328,60 @@ def get_fitness_action():
 
 
 
-def get_output(img_path):
+def get_output(img_data):
     with torch.no_grad():
         if args.stage=='sem_gcn':
             normalize = transforms.Normalize(mean = [0.485,0.456,0.406], std  = [0.229,0.224,0.225])
             transform = transforms.Compose([transforms.ToTensor(),normalize])
         else:
             transform = transforms.ToTensor()
-        # prepare input image
-        original_img = cv2.imread(img_path)
-        original_img_height, original_img_width = original_img.shape[:2]
+        # get input image size
+        original_img_height, original_img_width = img_data[0].shape[:2]
     
         # prepare bbox
         # shape of (N = number of detected objects ,6)   xmin   ymin    xmax    ymax  confidence class
-        bboxs = YOLO5_model([img_path]).xyxy[0]
-        bboxs = bboxs [ bboxs[: , 5] ==0 ]
-        # the bbox is already sorted by confidence
-        bbox = []
-        if len(bboxs >0):
-            xmin = bboxs[0][0]
-            ymin = bboxs[0][1]
-            width = bboxs[0][2] - xmin
-            height = bboxs[0][3] - ymin
-            bbox = [xmin.cpu() , ymin.cpu(), width.cpu(), height.cpu()]
-        else:
-            bbox = [1.0, 1.0, original_img_width, original_img_height]
+        imgs = []
+        detected_bboxs = YOLO5_model(img_data).xyxy
+        for i,bboxs in enumerate(detected_bboxs):
+
+            #bboxs = YOLO5_model(img_data).xyxy[0]
+            bboxs = bboxs [ bboxs[: , 5] ==0 ]
+            # the bbox is already sorted by confidence
+            bbox = []
+            if len(bboxs >0):
+                xmin = bboxs[0][0]
+                ymin = bboxs[0][1]
+                width = bboxs[0][2] - xmin
+                height = bboxs[0][3] - ymin
+                bbox = [xmin.cpu() , ymin.cpu(), width.cpu(), height.cpu()]
+            else:
+                bbox = [1.0, 1.0, original_img_width, original_img_height]
         
-        #bbox = [139.41, 102.25, 222.39, 241.57] # xmin, ymin, width, height
-        bbox = process_bbox(bbox, original_img_width, original_img_height)
-        img, img2bb_trans, bb2img_trans = generate_patch_image(original_img, bbox, 1.0, 0.0, False, cfg.input_img_shape) 
-        img = transform(img.astype(np.float32))/255
-        img = img.cuda()[None,:,:,:]
-    
+            #bbox = [139.41, 102.25, 222.39, 241.57] # xmin, ymin, width, height
+            bbox = process_bbox(bbox, original_img_width, original_img_height)
+            img, img2bb_trans, bb2img_trans = generate_patch_image(img_data[i], bbox, 1.0, 0.0, False, cfg.input_img_shape) 
+            img = transform(img.astype(np.float32))/255
+            imgs.append(img)
+            #img = img.cuda()[None,:,:,:]
+        
         # forward
-        inputs = {'img': img}
+        imgs = torch.stack(imgs).cuda()
+        inputs = {'img': imgs}
         targets = {}
         meta_info = {'bb2img_trans': None}
         out = I2L_model(inputs, targets, meta_info, 'test')
         
         # of shape (29,3) (17,3)
-        I2L_joints = out['joint_coord_img'][0]
+        I2L_joints = out['joint_coord_img']
         if args.stage == 'sem_gcn':
-            human36_joints = I2L_joints
-            return { 'human36_joint_coords':human36_joints.tolist()}
+            return [{ 'human36_joint_coords':joints.tolist()} for joints in I2L_joints]
         else:
-            human36_joints = transform_joint_to_other_db(I2L_joints.cpu().numpy(),cfg.smpl_joints_name , cfg.joints_name)
-            return {'smpl_joint_coords':I2L_joints.tolist(),\
-                'human36_joint_coords':human36_joints.tolist()}
+            #human36_joints = I2L_joints
+            #human36_joints = transform_joint_to_other_db(I2L_joints.cpu().numpy(),cfg.smpl_joints_name , cfg.joints_name)
+            return [{'smpl_joint_coords':joints.tolist(),\
+                'human36_joint_coords':\
+                transform_joint_to_other_db(joints.cpu().numpy(),cfg.smpl_joints_name , cfg.joints_name).tolist()}\
+                for joints in I2L_joints]
 
 # as tested on my laptop, currently the speed of file upload and neural network process is nearly 1 frame per second. For pure neural network process, 19.84 seconds for 100 image   
 # also returns match_action name, the action estimate will be executed on front end, since it's little calculation and every user has their own different data record.
@@ -397,30 +404,36 @@ def file_upload():
             flash('No selected file')
             return redirect(request.url)
         if file and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
-            file.save(os.path.join(store_folder, filename))
-            data = get_output(os.path.join(store_folder, filename))
-            action_idx, frame_idx, loss = ar.get_frame_idx(data, request.values['action_choice'] )
-            if action_idx == -1:
-                data['action_name'] = 'Loss exceeds threshold!'
-                data['loss'] = loss             
-            else:
-                #TODO: obtain the predicted and recorded action's joint data
-                match_action, match_frame = vr.get_frame(action_idx, frame_idx)
-                data['action_name'] = match_action
-                data['loss'] = loss
-                predicted_action = np.array(ar[action_idx]['data'][frame_idx]['human36_joint_coords'])
-                if(not 'timestamp' in request.values):
-                    print("timestamp not found")
-                    recorded_action = predicted_action
+
+            filestr = file.read()
+            npimg = np.frombuffer(filestr, np.uint8)
+            imgs = [cv2.imdecode(npimg, cv2.IMREAD_COLOR) for i in range(8)]
+            
+            data = get_output(imgs)
+            for data_per_frame in data:
+                action_idx, frame_idx, loss = ar.get_frame_idx(data_per_frame, request.values['action_choice'] )
+                if action_idx == -1:
+                    data_per_frame['action_name'] = 'Loss exceeds threshold!'
+                    data_per_frame['loss'] = loss             
                 else:
-                    recorded_frame = sc.time_to_frame(action_idx,request.values['timestamp']) % len(ar[action_idx]['data'])
-                    recorded_action = np.array(ar[action_idx]['data'][recorded_frame]['human36_joint_coords'])
-                data['action_accuracy'] = sc.score(np.array(data['human36_joint_coords']),action_idx,recorded_action,predicted_action)
-                cv2.imwrite(os.path.join(app.static_folder, 'match_frame.png') , match_frame)
+                    #TODO: obtain the predicted and recorded action's joint data
+                    match_action, match_frame = vr.get_frame(action_idx, frame_idx)
+                    data_per_frame['action_name'] = match_action
+                    data_per_frame['loss'] = loss
+                    predicted_action = np.array(ar[action_idx]['data'][frame_idx]['human36_joint_coords'])
+                    if(not 'timestamp' in request.values):
+                        print("timestamp not found")
+                        recorded_action = predicted_action
+                    else:
+                        recorded_frame = sc.time_to_frame(action_idx,request.values['timestamp']) % len(ar[action_idx]['data'])
+                        recorded_action = np.array(ar[action_idx]['data'][recorded_frame]['human36_joint_coords'])
+                    data_per_frame['action_accuracy'] = sc.score(np.array(data_per_frame['human36_joint_coords']),action_idx,recorded_action,predicted_action)
+                    #cv2.imwrite(os.path.join(app.static_folder, 'match_frame.png') , match_frame)
             
     #return json of coordinates
     return jsonify(data)
+
+
 @app.route("/staticUpload", methods = ['POST', 'PUT'])
 def action_upload():
     data = None
@@ -435,8 +448,12 @@ def action_upload():
             return redirect(request.url)
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
-            file.save(os.path.join(store_folder, filename))
-            data = get_output(os.path.join(store_folder, filename))
+            filestr = request.files['image'].read()
+            npimg = np.frombuffer(filestr, np.uint8)
+            img = cv2.imdecode(npimg, cv2.IMREAD_COLOR)
+            #file.save(os.path.join(store_folder, filename))
+            #data = get_output(os.path.join(store_folder, filename))
+            data = get_output([img])[0]
             action_idx, frame_idx, loss = ar.get_frame_idx(data, 'defalut' )
             if action_idx == -1:
                 data['action_name'] = 'Loss exceeds threshold!'
