@@ -468,8 +468,8 @@ const sliceImage = (formData) => {
   //append img to the formData
   console.log(`captured ${uploadImgList.length} images and ${uploadTimestampList.length} timestamps between uploads`)
   for(let i=0; i < IMAGE_BATCH; i++){
-    formData.append('image',uploadImgList[Math.max(Math.round(i * sliceInterval),uploadImgList.length-1)])
-    formData.append('timestamp',uploadTimestampList[Math.max(Math.round(i * sliceInterval),uploadTimestampList.length-1)])
+    formData.append('image',uploadImgList[Math.min(Math.round(i * sliceInterval),uploadImgList.length-1)])
+    formData.append('timestamp',uploadTimestampList[Math.min(Math.round(i * sliceInterval),uploadTimestampList.length-1)])
   }
   return formData
 }
