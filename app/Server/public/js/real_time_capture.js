@@ -34,6 +34,53 @@ start_camera.addEventListener('click', async function(){
     }
 })
 
+
+
+// assume every loop takes EXACT 1000/30 miliseconds to complete 
+function continue_show_scene() {
+  let i = 0;
+  let start_idx = 0;
+  let timeId = setInterval(() => {
+    if (start_idx < (one_click_joint_record.length-1)) {
+      // exceed time slot 
+      let cur_time_diff = i * 1000 / 30;
+      
+      if (cur_time_diff >=
+        (one_click_joint_record[one_click_joint_record.length - 1].timestamp
+          - one_click_joint_record[start_idx].timestamp)) {
+
+        start_idx = one_click_joint_record.length - 1;
+        i = 0;
+      }
+      else {
+            for (let i = start_idx; i< one_click_joint_record.length; i++){
+
+              let time_diff = one_click_joint_record[i].timestamp
+                - one_click_joint_record[start_idx].timestamp;
+
+              if (cur_time_diff <= time_diff) {
+	              let coe = (time_diff - cur_time_diff)/(one_click_joint_record[i].timestamp - one_click_joint_record[i-1].timestamp);
+		            // linear interpolation
+	              let new_skeleton = one_click_joint_record[i]['smpl_joint_coords'].map( (inner, row_idx)=>inner.map( (ele, col_idx)=> coe * ele + (1-coe) * one_click_joint_record[i-1]['smpl_joint_coords'][row_idx][col_idx] ) )
+	              // update new_skeleton 
+                update_skeleton(new_skeleton, I2L_skeleton);
+                i++;
+	              break;
+	            }
+            }       
+      }
+
+    }
+    else {
+      i = 0;
+    }
+
+    
+  },1000/30)
+  
+}
+
+
 // currently 30 fps
 function replay(record_data){
     let start = Date.now();
@@ -158,6 +205,7 @@ function test_only() {
   //console.log("current time: " + Date.now())
   //console.log("Starting time: " + startingTime)
   //console.log(`timestamp is ${timestamp}`)
+  console.log (formData.keys())
   let data = {
     method: 'PUT',
     body: formData
@@ -171,11 +219,11 @@ function test_only() {
 
       if (one_click_joint_record.length != 0) {
         let last_frame = one_click_joint_record[one_click_joint_record.length - 1]
-        replay(res.splice(0, 0, last_frame))
+        res.splice(0, 0, last_frame)
       }
-      else {
+
          replay(res)
-      }
+      
 
 
       //update_skeleton(res['smpl_joint_coords'], I2L_skeleton);
@@ -420,7 +468,7 @@ const sliceImage = (formData) => {
   let sliceInterval = uploadImgList.length / IMAGE_BATCH
   //append img to the formData
   console.log(`captured ${uploadImgList.length} images and ${uploadTimestampList.length} timestamps between uploads`)
-  for(var i=0; i < uploadImgList.length; i+=sliceInterval){
+  for(let i=0; i < uploadImgList.length; i+=sliceInterval){
     formData.append('image',uploadImgList[Math.round(i)])
     formData.append('timestamp',uploadTimestampList[Math.round(i)])
   }
@@ -457,6 +505,4 @@ const appendNewImage = (source) => {
     imgList.push(img)
     timestampList.push(Date.now()-startingTime)
 }
-
-
 
