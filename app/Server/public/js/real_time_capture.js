@@ -21,7 +21,7 @@ let timestampList = []
 //const and var related to continuous image appending
 const IMAGE_BATCH = 8
 const EST_DELAY = 1.5
-const IMAGE_NUM_OVERHEAD = 2
+const IMAGE_NUM_OVERHEAD = 4
 const IMAGE_INTERVAL = EST_DELAY/IMAGE_BATCH/IMAGE_NUM_OVERHEAD
 let newImgTimer = null
 
@@ -467,9 +467,9 @@ const sliceImage = (formData) => {
   let sliceInterval = uploadImgList.length / IMAGE_BATCH
   //append img to the formData
   console.log(`captured ${uploadImgList.length} images and ${uploadTimestampList.length} timestamps between uploads`)
-  for(let i=0; i < uploadImgList.length; i+=sliceInterval){
-    formData.append('image',uploadImgList[Math.round(i)])
-    formData.append('timestamp',uploadTimestampList[Math.round(i)])
+  for(let i=0; i < IMAGE_BATCH; i++){
+    formData.append('image',uploadImgList[Math.max(Math.round(i * sliceInterval),uploadImgList.length-1)])
+    formData.append('timestamp',uploadTimestampList[Math.max(Math.round(i * sliceInterval),uploadTimestampList.length-1)])
   }
   return formData
 }
