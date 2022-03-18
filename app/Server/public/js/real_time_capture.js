@@ -34,26 +34,24 @@ start_camera.addEventListener('click', async function(){
     }
 })
 
-
-
 // assume every loop takes EXACT 1000/30 miliseconds to complete 
 function continue_show_scene() {
-  let i = 0;
+  let frame_index = 0;
   let start_idx = 0;
   let timeId = setInterval(() => {
     if (start_idx < (one_click_joint_record.length-1)) {
       // exceed time slot 
-      let cur_time_diff = i * 1000 / 30;
+      let cur_time_diff = frame_index * 1000 / 30;
       
       if (cur_time_diff >=
         (one_click_joint_record[one_click_joint_record.length - 1].timestamp
           - one_click_joint_record[start_idx].timestamp)) {
 
         start_idx = one_click_joint_record.length - 1;
-        i = 0;
+        frame_index = 0;
       }
       else {
-            for (let i = start_idx; i< one_click_joint_record.length; i++){
+            for (let i = start_idx + 1; i< one_click_joint_record.length; i++){
 
               let time_diff = one_click_joint_record[i].timestamp
                 - one_click_joint_record[start_idx].timestamp;
@@ -64,7 +62,7 @@ function continue_show_scene() {
 	              let new_skeleton = one_click_joint_record[i]['smpl_joint_coords'].map( (inner, row_idx)=>inner.map( (ele, col_idx)=> coe * ele + (1-coe) * one_click_joint_record[i-1]['smpl_joint_coords'][row_idx][col_idx] ) )
 	              // update new_skeleton 
                 update_skeleton(new_skeleton, I2L_skeleton);
-                i++;
+                frame_index++;
 	              break;
 	            }
             }       
@@ -72,7 +70,7 @@ function continue_show_scene() {
 
     }
     else {
-      i = 0;
+      frame_index = 0;
     }
 
     
@@ -180,6 +178,7 @@ function startContinuousUpload() {
     stopUpload = false
     newImgTimer = setInterval(appendNewImage,IMAGE_INTERVAL * 1000,'File')
     setTimeout(newUpload,IMAGE_INTERVAL*IMAGE_BATCH*1000 + 100)
+    setTimeout(continue_show_scene, IMAGE_INTERVAL*IMAGE_BATCH*1000 + 100)
 }
 
 function stopContinuousUpload() {
