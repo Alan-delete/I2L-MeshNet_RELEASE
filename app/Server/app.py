@@ -396,19 +396,20 @@ def file_upload():
     # todo alt: directly pass the file to NN api
     if 'image' in request.files:
         print("upload success!")
-        file = request.files.getlist('image')
+        files = request.files.getlist('image')
         timestamp = np.array(list(map(float, request.values.getlist('timestamp'))))
-        if(len(file)>1):
-            file = file[0]
-            print("this is a list")
-        if file.filename == '':
+        #if(len(file)>1):
+        #    file = file[0]
+        #    print("this is a list")
+        if files[0].filename == '':
             flash('No selected file')
             return redirect(request.url)
-        if file and allowed_file(file.filename):
-
-            filestr = file.read()
-            npimg = np.frombuffer(filestr, np.uint8)
-            imgs = [cv2.imdecode(npimg, cv2.IMREAD_COLOR) for i in range(8)]
+        if files[0] and allowed_file(files[0].filename):
+            imgs = []
+            for file in files:        
+                filestr = file.read()
+                npimg = np.frombuffer(filestr, np.uint8)
+                imgs.append(cv2.imdecode(npimg, cv2.IMREAD_COLOR))
             
             data = get_output(imgs)
             for index,data_per_frame in enumerate(data):
