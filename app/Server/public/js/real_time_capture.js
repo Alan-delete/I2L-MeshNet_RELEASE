@@ -39,9 +39,14 @@ function continue_show_scene() {
   let frame_index = 0;
   let start_idx = 0;
   let timeId = setInterval(() => {
+    if (stopUpload) {
+      console.log ("try to stop the continue show scene")
+      clearInterval(timeId)
+      return;
+    }
     if (start_idx < (one_click_joint_record.length-1)) {
       // exceed time slot 
-      let cur_time_diff = frame_index * 1000 / 30;
+      let cur_time_diff = frame_index * 1000 / 40;
       
       if (cur_time_diff >=
         (one_click_joint_record[one_click_joint_record.length - 1].timestamp
@@ -80,27 +85,42 @@ function continue_show_scene() {
 
 
 // currently 30 fps
-function replay(record_data){
-    let start = Date.now();
+function replay(record_data) {
+  let frame_index = 0
+  let start_idx = 0;
+    
+    //let start = Date.now();
     let timerId = setInterval(()=>{
-        let cur_time_diff = (Date.now() - start);
-        if (cur_time_diff >= (record_data[record_data.length-1].timestamp - record_data[0].timestamp)){
+        //let cur_time_diff = (Date.now() - start);
+        let cur_time_diff = frame_index*1000/40 ;
+        if (start_idx == record_data.length-1 || cur_time_diff >= (record_data[record_data.length-1].timestamp - record_data[0].timestamp)){
             clearInterval(timerId);
         }
-        else{
+        else {
+          let time_diff = record_data[start_idx].timestamp - record_data[0].timestamp;
+          let coe = (cur_time_diff - time_diff)/(record_data[start_idx+1].timestamp - record_data[start_idx].timestamp);
+          console.log(coe)
+          if (coe >= 1) {
+            coe = 1;
+            start_idx++;
+          }
+
+          /*
             for (let i = 1; i< record_data.length; i++){
 	        let time_diff = record_data[i].timestamp - record_data[0].timestamp
 	        if (time_diff >= cur_time_diff){
 	            let coe = (time_diff - cur_time_diff)/(record_data[i].timestamp - record_data[i-1].timestamp);
-		    // linear interpolation
-	            let new_skeleton = record_data[i]['smpl_joint_coords'].map( (inner, row_idx)=>inner.map( (ele, col_idx)=> coe * ele + (1-coe) * record_data[i-1]['smpl_joint_coords'][row_idx][col_idx] ) )
+            */
+        // linear interpolation
+	            let new_skeleton = record_data[start_idx]['smpl_joint_coords'].map( (inner, row_idx)=>inner.map( (ele, col_idx)=> coe * ele + (1-coe) * record_data[start_idx+1]['smpl_joint_coords'][row_idx][col_idx] ) )
 	            // update new_skeleton 
 		    update_skeleton(new_skeleton, I2L_skeleton)
-	            break;
+	            
 	        }
-            }
-        }
-    }, 1000/30)
+                 
+      frame_index++;
+
+    }, 1000/40)
 }
 
 //for above function
@@ -176,7 +196,7 @@ function startContinuousUpload() {
     timestampList = []
     imgList = []
     stopUpload = false
-    newImgTimer = setInterval(appendNewImage,IMAGE_INTERVAL * 1000,'File')
+    newImgTimer = setInterval(appendNewImage,IMAGE_INTERVAL * 1000,'Capture')
     setTimeout(newUpload,IMAGE_INTERVAL*IMAGE_BATCH*1000 + 100)
     setTimeout(continue_show_scene, IMAGE_INTERVAL*IMAGE_BATCH*1000 + 100)
 }
@@ -204,7 +224,7 @@ function test_only() {
   //console.log("current time: " + Date.now())
   //console.log("Starting time: " + startingTime)
   //console.log(`timestamp is ${timestamp}`)
-  console.log (formData.keys())
+
   let data = {
     method: 'PUT',
     body: formData
@@ -215,28 +235,30 @@ function test_only() {
   })
     .then(res => {
       console.log(res)
-
+      //update_skeleton(res[0]['smpl_joint_coords'], I2L_skeleton)
+      /*
       if (one_click_joint_record.length != 0) {
         let last_frame = one_click_joint_record[one_click_joint_record.length - 1]
         res.splice(0, 0, last_frame)
       }
 
          replay(res)
-      
+      */
 
 
       //update_skeleton(res['smpl_joint_coords'], I2L_skeleton);
       for (let i = 0; i < res.length; i++) {
+          // need to improve for a batch of image upload
+          one_click_joint_record.push({
+            'smpl_joint_coords': res[i]['smpl_joint_coords'],
+            'timestamp': res[i]['timestamp']
+          })
+
         if (res[i]['action_name'] != 'Loss exceeds threshold!') {
           action_record.push({
             'action_name': res[i]['action_name'],
             'loss': res[i]['loss']
 
-          })
-          // need to improve for a batch of image upload
-          one_click_joint_record.push({
-            'smpl_joint_coords': res[i]['smpl_joint_coords'],
-            'timestamp': res[i]['timestamp']
           })
           accuracyRecord.push(res[i].action_accuracy)
         }
@@ -246,8 +268,7 @@ function test_only() {
       let max_value = 0.00001
       let predicted_action = ''
       let total_loss = 0
-      // need to extract data from res
-      let replay_data = one_click_joint_record;
+
 
         if (action_record.length > 10) {
 
