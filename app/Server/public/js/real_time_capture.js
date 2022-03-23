@@ -64,8 +64,9 @@ function continue_show_scene() {
 
               if (cur_time_diff <= time_diff) {
 	              let coe = (time_diff - cur_time_diff)/(one_click_joint_record[i].timestamp - one_click_joint_record[i-1].timestamp);
+                console.log(coe)
 		            // linear interpolation
-	              let new_skeleton = one_click_joint_record[i]['smpl_joint_coords'].map( (inner, row_idx)=>inner.map( (ele, col_idx)=> coe * ele + (1-coe) * one_click_joint_record[i-1]['smpl_joint_coords'][row_idx][col_idx] ) )
+	              let new_skeleton = one_click_joint_record[i]['smpl_joint_coords'].map( (inner, row_idx)=>inner.map( (ele, col_idx)=> (1-coe) * ele + (coe) * one_click_joint_record[i-1]['smpl_joint_coords'][row_idx][col_idx] ) )
 	              // update new_skeleton 
                 update_skeleton(new_skeleton, I2L_skeleton);
                 frame_index++;
@@ -100,11 +101,12 @@ function replay(record_data) {
         else {
           let time_diff = record_data[start_idx].timestamp - record_data[0].timestamp;
           let coe = (cur_time_diff - time_diff)/(record_data[start_idx+1].timestamp - record_data[start_idx].timestamp);
-          console.log(coe)
-          if (coe >= 1) {
-            coe = 1;
+          while (coe >= 1) {
             start_idx++;
+            time_diff = record_data[start_idx].timestamp - record_data[0].timestamp;
+            coe = (cur_time_diff - time_diff)/(record_data[start_idx+1].timestamp - record_data[start_idx].timestamp);
           }
+          console.log(`${coe}`)
 
           /*
             for (let i = 1; i< record_data.length; i++){
@@ -113,7 +115,7 @@ function replay(record_data) {
 	            let coe = (time_diff - cur_time_diff)/(record_data[i].timestamp - record_data[i-1].timestamp);
             */
         // linear interpolation
-	            let new_skeleton = record_data[start_idx]['smpl_joint_coords'].map( (inner, row_idx)=>inner.map( (ele, col_idx)=> coe * ele + (1-coe) * record_data[start_idx+1]['smpl_joint_coords'][row_idx][col_idx] ) )
+	        let new_skeleton = record_data[start_idx]['smpl_joint_coords'].map( (inner, row_idx)=>inner.map( (ele, col_idx)=> (1-coe) * ele + (coe) * record_data[start_idx+1]['smpl_joint_coords'][row_idx][col_idx] ) )
 	            // update new_skeleton 
 		    update_skeleton(new_skeleton, I2L_skeleton)
 	            
