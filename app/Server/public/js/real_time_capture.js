@@ -7,7 +7,8 @@ let url = `${ngrok_url}realTimeUpload`
 import { update_skeleton} from './draw.js'
 
 let start_camera = document.querySelector("#start-camera")
-let video = document.querySelector("#video")
+//let video = document.querySelector("#camera-feed")
+let video = document.querySelector("#video-player")
 let start_capture = document.querySelector('#start-capture')
 let captured_image = document.querySelector('#captured-image')
 
@@ -20,7 +21,7 @@ let timestampList = []
 
 //const and var related to continuous image appending
 const IMAGE_BATCH = 8
-const EST_DELAY = 1.5
+const EST_DELAY = 1
 const IMAGE_NUM_OVERHEAD = 4
 const IMAGE_INTERVAL = EST_DELAY/IMAGE_BATCH/IMAGE_NUM_OVERHEAD
 let newImgTimer = null
@@ -207,7 +208,7 @@ function stopContinuousUpload() {
     stopUpload = true
     clearInterval(newImgTimer)
     console.log(action_record)
-
+    setTimeout(constantPlayback,3000,0)
 }
 
 function newUpload() {
@@ -505,7 +506,7 @@ const getNewImage = (source) => {
     //get img data
     let imageData = captured_image.toDataURL("image/png")
     //convert img data into img source
-    let imgStr = imageData.substr(22)
+    let imgStr = imageData
     //create new img file from img source
     let img = new Image();
     img.src = imgStr
@@ -524,5 +525,12 @@ const appendNewImage = (source) => {
     let img = getNewImage(source)
     imgList.push(img)
     timestampList.push(Date.now()-startingTime)
+}
+
+const constantPlayback = (i) => {
+  if(i<one_click_joint_record.length){
+    update_skeleton(one_click_joint_record[i]['smpl_joint_coords'],I2L_skeleton)
+    setTimeout(constantPlayback,100,i+1)
+  }
 }
 
