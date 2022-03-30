@@ -1,104 +1,125 @@
 <!DOCTYPE html>
 <html>
-	<head>
-		<meta charset="utf-8">
-		<title>My first three.js app</title>
-		<style>
 
-		</style>
-		<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">	
-	</head>
-	<body>
-		<main >
-		<div class = 'container-fluid'>
-			<div class = 'row border'>
-				<div class = 'col border'>
-					
-					<div class = 'row gy-3 border'>
-					<img id="blah" src="public/match_frame.png" alt="your image" class = 'justify-content-center'width = "75%" height="75%"/>
-						<div class = 'mx-2' id = 'interact'>
-							<select id = "Action_Choice" class = 'form-select'>
-								<option selected>Choose the action your want</option>
-								<option value = "Jump_Jack">Jump_Jack</option>
-								<option value = "Wide_Push_Up">Wide_Push_Up</option>
+<head>
+	<meta charset="utf-8">
+	<title>My first three.js app</title>
+	<style>
+
+	</style>
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet"
+		integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+</head>
+
+<body>
+	<main>
+		<div class='container-fluid'>
+			<div class='row border'>
+				<div class='col border'>
+
+					<div class='row gy-3 border'>
+						<img id="blah" class = 'd-none' src="public/match_frame.png" alt="your image" class='justify-content-center'
+							width="75%" height="75%" />
+						<video id='video-player' width="700" loop preload="auto"
+							controlslist="nodownload nofullscreen noremoteplayback"
+							src="public/Fitness_video/Jump_Jack.mp4">
+						</video>
+						<div class='mx-2' id='interact'>
+							<select id="Action_Choice" class='form-select'>
+								<option selected value="Default">Choose the action your want</option>
+								<option value="Jump_Jack">Jump_Jack</option>
+								<option value="Wide_Push_Up">Wide_Push_Up</option>
 							</select>
 
-							<div  class = 'd-flex justify-content-center my-2'>
-								<form id = "form" class="form-inline" method="post" >
-									<input class = 'form-control' type="file" id="form-image" name="form-image" >
-									<button type = 'submit' class = "btn btn-primary">
+							<div class='d-flex justify-content-center my-2'>
+								<form id="form" class="form-inline" method="post">
+									<input class='form-control' type="file" id="form-image" name="form-image">
+									<button type='submit' class="btn btn-primary">
 										Upload Image Or video to find action
 									</button>
-								</form> 
+								</form>
 							</div>
 						</div>
 					</div>
-					<div class = 'row my-3'>
+					<div class='row my-3'>
 
 
-						<div  class = 'd-flex justify-content-center my-2'>
-							<button id = 'start-camera' type = 'button' class = "mx-2 btn btn-primary" >
+						<div class='d-flex justify-content-center my-2'>
+							<button id='start-camera' type='button' class="mx-2 btn btn-primary">
 								Access Camera
 							</button>
-							<button id = 'start-capture' type = 'button' class = "mx-2 btn btn-primary" style = "display: none;">
+							<button id='start-capture' type='button' class="mx-2 btn btn-primary"
+								style="display: none;">
 								Start Capture
 							</button>
-						</div>		
-
-						<div  class = 'd-flex justify-content-center my-2'>
-							<video id="video" width="320" height="240" autoplay></video>
 						</div>
-					
-						<div class = 'd-flex justify-content-center my-2'>				
+
+						<div class='d-flex justify-content-center my-2'>
+							<video id="camera-feed" width="320" height="240" autoplay></video>
+						</div>
+
+						<div class='d-flex justify-content-center my-2'>
 							<!-- <p class='mx-2'>Fake Movement</p>	-->
-							<button id = 'start' type = 'button' class = "mx-2 btn btn-primary" >
+							<button id='start' type='button' class="mx-2 btn btn-primary">
 								Start
 							</button>
-							<button id = 'stop' type = 'button' class = "mx-2 btn btn-primary" >
+							<button id='stop' type='button' class="mx-2 btn btn-primary">
 								Stop
 							</button>
 						</div>
-						
-						<div  class = 'd-none justify-content-center my-2'>
+
+						<div class='d-none justify-content-center my-2'>
 							<canvas id="captured-image" width="320" height="240"></canvas>
-						</div>	
+						</div>
 
 					</div>
 
 				</div>
 
-				<div class = 'col-8'>
-					<div class ='mx-2 mt-1 my-1' id="3dCanvas" style="border:3px solid #000000;"></div>
-						<div id= "result" class='my-3 text-center'>
-							<ul hidden class="list-group">
-  								<li class="list-group-item">Action Name:<a id= "Action_Name"></a></li>
-  								<li class="list-group-item">Average Socre:<a id= "Average_Socre"></a></li>
-  								<li class="list-group-item">Body Part to be impoved:<a id= "Body_Part"></a></li>
-							</ul>
-						</div>
+				<div class='col-8'>
+					<div class='mx-2 mt-1 my-1' id="3dCanvas" style="border:3px solid #000000;"></div>
+					<div id="result" class='my-3 text-center' style="display: none;">
+						<ul class="list-group">
+							<li class="list-group-item">Action Name:<a id="Action_Name"></a></li>
+							<li class="list-group-item">Average Socre:<a id="Average_Score"></a></li>
+							<li class="list-group-item">Body Part to be impoved:<a id="Body_Part"></a></li>
+						</ul>
 					</div>
 				</div>
 			</div>
-			<div class = 'row my-3'>
-				<div class='text-center'>
-					<details>
-						<summary><strong> Record</summary>
-						<table id= "record" class="my-2 table table-success table-hover">
+		</div>
+		<div class='row my-3'>
+			<div class='col-12 d-flex justify-content-center'>
+
+			</div>
+		</div>
+		<div class='row my-3'>
+			<div class='text-center'>
+				<details>
+					<summary><strong> Record</summary>
+					<table class="my-2 table table-success table-hover">
+						<thead>
 							<tr>
 								<td>Action Name</td>
 								<td>Average Socre</td>
 								<td>Body Part to be impoved</td>
+								<td>Replay</td>
 							</tr>
-						</table>
-					</details>
-				</div>
+						</thead>
+						<tbody id="record">
+						</tbody>
+					</table>
+				</details>
 			</div>
 		</div>
-		</main >
-		<script> Action_Name.text = "aaa"</script>
-		<!--<script src="public/js/three.js"></script> -->
-		<script src="public/js/global_config.js"></script>
-		<script type="module" src="public/js/draw.js"></script>
-		<script type="module" src="public/js/real_time_capture.js"></script>
-	</body>
+		</div>
+	</main>
+	<!--script> Action_Name.text = "aaa"</script>
+		<script src="public/js/three.js"></script> -->
+	<script src="public/js/global_config.js"></script>
+	<script type="module" src="public/js/draw.js"></script>
+	<script type="module" src="public/js/real_time_capture.js"></script>
+	<script type="module" src="public/js/video_playback.js"></script>
+</body>
+
 </html>
