@@ -5,7 +5,7 @@ import numpy as np
 import torch 
 import random
 # for easier debuggingi and reproducibility
-seed = 7
+seed = 10# 7
 torch.manual_seed(seed)
 torch.cuda.manual_seed_all(seed)
 random.seed(seed)
@@ -17,7 +17,7 @@ class Config:
     ## dataset
     # MuCo, Human36M, MSCOCO, PW3D, FreiHAND
     trainset_3d = ['Human36M']#MuCo, Human36M, FreiHAND
-    trainset_2d = []#['MSCOCO'] # MSCOCO
+    trainset_2d =[] #['MSCOCO'] # MSCOCO
     testset = 'Human36M'# Human36M, MSCOCO, PW3D, FreiHAND
 
     ## model setting
@@ -34,6 +34,8 @@ class Config:
     joints_name = ('Pelvis', 'R_Hip', 'R_Knee','R_Ankle', 'L_Hip', 'L_Knee', 'L_Ankle', 'Torso','Neck', 'Nose', 'Head_top', 'L_Shoulder', 'L_Elbow','L_Wrist', 'R_Shoulder', 'R_Elbow', 'R_Wrist')
     joint_num = 17
     skeleton = ( (0, 7), (7, 8), (8, 9), (9, 10),(8, 11), (11, 12), (12, 13), (8, 14), (14, 15), (15,16), (0, 1), (1, 2), (2, 3), (0, 4), (4, 5), (5, 6))
+    mirror_skeleton = ( (0, 7), (7, 8), (8, 9), (9, 10),(8, 11), (11, 12), (12, 13), (8, 14), (14, 15), (15,16),
+(0, 1), (1, 2), (2, 3), (0, 4), (4, 5), (5, 6),(1,4), (2,5), (3,6), (11,14), (12,15), (13,16))
     root_joint_idx = 0
     smpl_joint_num = 29 # original: 24. manually add nose, L/R eye, L/R ear
     smpl_joints_name = ('Pelvis', 'L_Hip', 'R_Hip', 'Torso', 'L_Knee', 'R_Knee', 'Spine', 'L_Ankle', 'R_Ankle', 'Chest', 'L_Toe', 'R_Toe', 'Neck', 'L_Thorax', 'R_Thorax', 'Head', 'L_Shoulder', 'R_Shoulder', 'L_Elbow', 'R_Elbow', 'L_Wrist', 'R_Wrist', 'L_Hand', 'R_Hand', 'Nose', 'L_Eye', 'R_Eye', 'L_Ear', 'R_Ear')
@@ -42,15 +44,15 @@ class Config:
 
 
     ## training config
-    lr_dec_epoch = [6,8] if 'FreiHAND' not in trainset_3d + trainset_2d + [testset] else [17,21]
-    end_epoch = 9 if 'FreiHAND' not in trainset_3d + trainset_2d + [testset] else 25
+    lr_dec_epoch = [4,7] if 'FreiHAND' not in trainset_3d + trainset_2d + [testset] else [17,21]
+    end_epoch = 8 if 'FreiHAND' not in trainset_3d + trainset_2d + [testset] else 25
     lr = 1e-4
     lr_dec_factor = 10
     train_batch_size = 16 
     normal_loss_weight = 0.1
 
     ## testing config
-    test_batch_size = 8
+    test_batch_size = 1
     use_gt_info = True # set it False when YOLO is ready`
 
     ## others
@@ -65,6 +67,7 @@ class Config:
     cur_dir = osp.dirname(os.path.abspath(__file__))
     root_dir = osp.join(cur_dir, '..')
     data_dir = osp.join(root_dir, 'data')
+    #data_dir = osp.join(root_dir, '../I2L-MeshNet_RELEASE/data')
     output_dir = osp.join(root_dir, 'output')
     #model_dir = osp.join(output_dir, 'model_dump')
     model_dir = osp.join(root_dir, 'weights')

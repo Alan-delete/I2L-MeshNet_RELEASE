@@ -1,3 +1,4 @@
+import os
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
@@ -36,18 +37,18 @@ class Model_2Dpose(nn.Module):
         return heatmap
     
     def forward(self, inputs, targets, meta_info, mode = 'test'):
-        self.pose_backbone.eval()
+        #self.pose_backbone.eval()
         with torch.no_grad():
             shared_img_feat, pose_img_feat = self.pose_backbone(inputs['img'])
         #shared_img_feat, pose_img_feat = self.pose_backbone(inputs['img'])
         # shape of image feature of resnet is [N, 2048, 13, 20]
-        self.pose_net.eval()
+        #self.pose_net.eval()
         joint_coord_img = self.pose_net(pose_img_feat)
         
         if (mode=='train'):
             loss = {}
             loss['joint_orig'] = self.coord_loss(joint_coord_img, targets['orig_joint_img'], valid = meta_info['orig_joint_trunc'] ,is_3D = meta_info['is_3D'])
-            loss['bone_vector'] = self.bone_vec_loss(joint_coord_img, targets['orig_joint_img'])
+            #loss['bone_vector'] = self.bone_vec_loss(joint_coord_img, targets['orig_joint_img'])
 #            for k,v in loss.items():
 #                if torch.any(torch.isnan(v)):
 #                    print("current img feat is:", pose_img_feat)
@@ -100,8 +101,14 @@ def get_model(joint_num, mode):
     pose_net = PoseNet(joint_num)
 
     if mode == 'train':
-        pose_backbone.init_weights()
+        # we load pretained backbone instead of the online one
+        backbone_ckpt = torch.load(os.path.join(cfg.model_dir, 'backbone.pth.tar'))
+        pose_backbone.load_state_dict(backbone_ckpt['network'])
+        #pose_backbone.init_weights()
         pose_net.apply(init_weights)
+        # load fixed sub branch
+        if (cfg.stage=='hybrid'):
+            pose_net.sem_gcn_init()
 
     model = Model_2Dpose(pose_backbone, pose_net)
     return model

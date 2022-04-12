@@ -57,17 +57,23 @@ class Trainer(Base):
         return optimizer
 
     def save_model(self, state, epoch):
-        file_path = osp.join(cfg.model_dir,'second_hybrid_{}.pth.tar'.format(str(epoch)))
+        file_path = osp.join(cfg.model_dir,'weak_super_heatmap_sem_{}.pth.tar'.format(str(epoch)))
+        file_path = osp.join(cfg.model_dir,'backbone_heatmap_sem_{}.pth.tar'.format(str(epoch)))
+        file_path = osp.join(cfg.model_dir,'frozen_backbone_heatmap_sem_{}.pth.tar'.format(str(epoch)))
+        file_path = osp.join(cfg.model_dir,'human36_backbone_heatmap_sem_{}.pth.tar'.format(str(epoch)))
         torch.save(state, file_path)
         self.logger.info("Write snapshot into {}".format(file_path))
 
     def load_model(self, model, optimizer):
-        model_file_list = glob.glob(osp.join(cfg.model_dir,'second_hybrid_*.pth.tar'))
+        chpt_name = 'weak_super_heatmap_sem_'
+        chpt_name ='backbone_heatmap_sem_'
+        model_file_list = glob.glob(osp.join(cfg.model_dir,'{}*.pth.tar').format(chpt_name) )
         #cur_epoch = max([int(file_name[file_name.find('snapshot_') + 9 : file_name.find('.pth.tar')]) for file_name in model_file_list])
         #ckpt_path = osp.join(cfg.model_dir, 'snapshot_' + str(cur_epoch) + '.pth.tar')
-        cur_epoch = max([int(file_name[file_name.find('hybrid_') + 7 : file_name.find('.pth.tar')]) for file_name in model_file_list])
-        ckpt_path = osp.join(cfg.model_dir, 'second_hybrid_' + str(cur_epoch) + '.pth.tar')
-        #ckpt_path = osp.join(cfg.model_dir, 'snapshot_demo.pth.tar')
+        cur_epoch = max([ int(file_name\
+                [file_name.find(chpt_name)+len(chpt_name):file_name.find('.pth.tar')])\
+                for file_name in model_file_list])
+        ckpt_path = osp.join(cfg.model_dir, chpt_name + str(cur_epoch) + '.pth.tar')
         ckpt = torch.load(ckpt_path) 
         start_epoch = ckpt['epoch'] + 1
         model.load_state_dict(ckpt['network'], strict=False)
@@ -151,8 +157,10 @@ class Tester(Base):
 
     def _make_batch_generator(self):
         # data load and construct batch generator
+        normalize = transforms.Normalize(mean = [0.485,0.456,0.406], std  = [0.229,0.224,0.225])
+        transform = transforms.Compose([transforms.ToTensor(),normalize])
         self.logger.info("Creating dataset...")
-        testset_loader = eval(cfg.testset)(transforms.ToTensor(), "test")
+        testset_loader = eval(cfg.testset)(transform, "test")
         batch_generator = DataLoader(dataset=testset_loader, batch_size=cfg.num_gpus*cfg.test_batch_size, shuffle=False, num_workers=cfg.num_thread, pin_memory=True)
         
         self.testset = testset_loader
@@ -162,18 +170,29 @@ class Tester(Base):
 
     def _make_model(self):
         #model_path = os.path.join(cfg.model_dir, 'snapshot_%d.pth.tar' % self.test_epoch)
-        #model_path = os.path.join(cfg.model_dir, 'snapshot_demo.pth.tar' )
-        model_path = os.path.join(cfg.model_dir, 'hybrid_1.pth.tar' )
+        if (cfg.stage == 'lixel'):
+            model_path = os.path.join(cfg.model_dir, 'snapshot_demo.pth.tar' )
+            model = get_model( 29, 'test')
+        else:
+            chpt_name = 'weak_super_heatmap_sem_'
+            chpt_name = 'human36_backbone_heatmap_sem_'
+            model_file_list = glob.glob(osp.join(cfg.model_dir,'{}*.pth.tar').format(chpt_name) )
+            cur_epoch = max([ int(file_name\
+                    [file_name.find(chpt_name)+len(chpt_name):file_name.find('.pth.tar')])\
+                    for file_name in model_file_list])
+            model_path = osp.join(cfg.model_dir, chpt_name + str(cur_epoch) + '.pth.tar')
+            model = get_model( self.joint_num, 'test')
+        #model_path = os.path.join(cfg.model_dir, 'hybrid_1.pth.tar' )
         assert os.path.exists(model_path), 'Cannot find model at ' + model_path
         self.logger.info('Load checkpoint from {}'.format(model_path))
         
         # prepare network
         self.logger.info("Creating graph...")
-        model = get_model( self.joint_num, 'test')
         model = DataParallel(model).cuda()
         ckpt = torch.load(model_path)
         model.load_state_dict(ckpt['network'], strict=False)
         model.eval()
+        #model.train()
 
         self.model = model
 

@@ -52,6 +52,11 @@ def main():
         # forward
         with torch.no_grad():
             out = tester.model(inputs, targets, meta_info, 'test' )
+
+
+        #print(out['joint_coord_img'][0])
+        #print(targets['orig_joint_img'][0])
+        #break
        
         # save output
         out = {k: v.cpu().numpy() for k,v in out.items()}

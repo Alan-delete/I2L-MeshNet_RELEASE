@@ -26,11 +26,11 @@ class CoordLoss(nn.Module):
         super(CoordLoss, self).__init__()
 
     def forward(self, coord_out, coord_gt, valid, is_3D=None):
-        loss = torch.abs(coord_out - coord_gt) * valid
+        loss = torch.square(coord_out - coord_gt) * valid
         if is_3D is not None:
             loss_z = loss[:,:,2:] * is_3D[:,None,None].float()
             loss = torch.cat((loss[:,:,:2], loss_z),2)
-
+        loss = torch.sum(loss,2)
         return loss
 
 class ParamLoss(nn.Module):
