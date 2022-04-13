@@ -149,8 +149,15 @@ function create_skelton(position, indices){
     const geometry = new THREE.BufferGeometry();    
     geometry.setIndex(indices);    
     geometry.setAttribute('position', new THREE.Float32BufferAttribute(position,3));
-    
+      const colors = [
+    255, 255, 0, 255, 255, 0,
+    0, 255, 255, 0, 255, 255
+  ];
+	 // let init_color = flatten_array(...)
+    //geometry.setAttribute('color', new THREE.Uint8BufferAttribute(colors, 3, true));
+
     const material = new THREE.MeshBasicMaterial( { color: 0xFF69B4 } );
+	  //const material = new THREE.LineBasicMaterial({ vertexColors: true});
     let skeleton = new THREE.LineSegments(geometry, material);
     const quaternion = new THREE.Quaternion();
     //quaternion.setFromUnitVectors( spine_vecotor,new THREE.Vector3( 0, 1, 0 ) );
