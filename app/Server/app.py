@@ -288,9 +288,9 @@ class Scoring():
 
 def init_I2L(test_epoch = 12,mode = 'test'):
     # snapshot load
-    if args.stage == 'sem_gcn':
+    if args.stage == 'sem_gcn' or args.stage=='hybrid':
         joint_num = 17
-        model_path = os.path.join(cfg.model_dir,'second_hybrid_8.pth.tar')
+        model_path = os.path.join(cfg.model_dir,'2_experiment_9.pth.tar')
     else:
         joint_num = 29
         model_path = os.path.join(cfg.model_dir,'snapshot_demo.pth.tar')  
