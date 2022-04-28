@@ -219,10 +219,11 @@ function init(){
     controls = new OrbitControls( camera, renderer.domElement );
     window.addEventListener( 'resize', onWindowResize );
 
-  I2L_skeleton = create_skelton(init_position, I2L_indices);
+  //I2L_skeleton = create_skelton(init_position, I2L_indices);
+	I2L_skeleton = create_skelton([], I2L_indices);
     scene.add(I2L_skeleton);
   human36_skeleton = create_skelton([], human36_indices);
-  human36_skeleton.position.x = -40;
+  //human36_skeleton.position.x = -40;
     scene.add(human36_skeleton);
   Sem_skeleton = create_skelton([], human36_indices);
   Sem_skeleton.position.x = 40;
