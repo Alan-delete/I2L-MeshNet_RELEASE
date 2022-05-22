@@ -5,7 +5,7 @@ import numpy as np
 import torch 
 import random
 # for easier debuggingi and reproducibility
-seed = 10# 7
+seed =  10
 torch.manual_seed(seed)
 torch.cuda.manual_seed_all(seed)
 random.seed(seed)
@@ -44,12 +44,13 @@ class Config:
 
 
     ## training config
-    lr_dec_epoch = [4,7] if 'FreiHAND' not in trainset_3d + trainset_2d + [testset] else [17,21]
-    end_epoch = 8 if 'FreiHAND' not in trainset_3d + trainset_2d + [testset] else 25
+    lr_dec_epoch = [4,10,16] if 'FreiHAND' not in trainset_3d + trainset_2d + [testset] else [17,21]
+    end_epoch = 17 if 'FreiHAND' not in trainset_3d + trainset_2d + [testset] else 25
     lr = 1e-4
     lr_dec_factor = 10
     train_batch_size = 16 
     normal_loss_weight = 0.1
+    ckpt_name = None
 
     ## testing config
     test_batch_size = 1
@@ -59,15 +60,15 @@ class Config:
     num_thread = 10
     gpu_ids = '0'
     num_gpus = 1
-    stage = 'lixel' # 2D ,3D
+    stage = 'lixel' # sem_gcn, hybrid
     non_local = False
     continue_train = True#False
     
     ## directory
     cur_dir = osp.dirname(os.path.abspath(__file__))
     root_dir = osp.join(cur_dir, '..')
-    data_dir = osp.join(root_dir, 'data')
-    #data_dir = osp.join(root_dir, '../I2L-MeshNet_RELEASE/data')
+    #data_dir = osp.join(root_dir, 'data')
+    data_dir = osp.join(root_dir, '../I2L-MeshNet_RELEASE/data')
     output_dir = osp.join(root_dir, 'output')
     #model_dir = osp.join(output_dir, 'model_dump')
     model_dir = osp.join(root_dir, 'weights')
@@ -77,11 +78,13 @@ class Config:
     #mano_path = osp.join(root_dir, 'common', 'utils', 'manopth')
     #smpl_path = osp.join(root_dir, 'common', 'utils', 'smplpytorch')
     
-    def set_args(self, gpu_ids, stage='2D', continue_train=False, non_local = False):
+    def set_args(self, gpu_ids, stage='lixel', continue_train=False, non_local =
+False, ckpt_name = None):
         self.gpu_ids = gpu_ids
         self.num_gpus = len(self.gpu_ids.split(','))
         self.stage = stage
         self.non_local = non_local
+        self.ckpt_name = ckpt_name
         # extend training schedule
         if self.stage == 'param':
             self.lr_dec_epoch = [x+5 for x in self.lr_dec_epoch]

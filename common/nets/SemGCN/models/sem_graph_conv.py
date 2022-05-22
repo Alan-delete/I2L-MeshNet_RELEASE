@@ -35,7 +35,7 @@ class SemGraphConv(nn.Module):
         h0 = torch.matmul(input, self.W[0])
         h1 = torch.matmul(input, self.W[1])
 
-        adj = -9e15 * torch.ones_like(self.adj).to(input.device)
+        adj = -9e8 * torch.ones_like(self.adj).to(input.device)
         adj[self.m] = self.e
         adj = F.softmax(adj, dim=1)
 

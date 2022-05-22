@@ -1,4 +1,5 @@
 import torch
+import os 
 import torch.nn as nn
 from torch.nn import functional as F
 from torchvision.models import densenet121, densenet169, densenet201, densenet161
@@ -21,6 +22,8 @@ class PoseNet(nn.Module):
             # shape is (N, 17,64)
             #heat map 
             self.sem_gcn = SemGCN(cfg.skeleton, coords_dim = (64+2,64), nodes_group = cfg.skeleton if cfg.non_local else None )
+            #self.deconv_z = make_deconv_layers([2048,256,self.joint_num])
+            #self.sem_gcn2 = SemGCN(cfg.skeleton, coords_dim = (32*32,64), nodes_group = cfg.skeleton if cfg.non_local else None )
 
         elif (cfg.stage == 'lixel'):
             self.conv_z_1 = make_conv1d_layers([2048,256*cfg.output_hm_shape[0]], kernel=1, stride=1, padding=0)
@@ -29,15 +32,20 @@ class PoseNet(nn.Module):
         else:
             # after flatten the size is 32*32 , or mean the size is 32
             self.deconv_z = make_deconv_layers([2048,256,self.joint_num])
+            #self.deconv_z =torch.nn.Sequential( 
+            #                                make_conv_layers((2048,512,256,joint_num) )                                            
+#)
             #self.feat_conv = make_conv_layers((2048,512,256,joint_num), bnrelu_final = True )
+            #self.conv_assess = make_conv_layers((2048,256,joint_num))
             self.assess = torch.nn.Sequential(torch.nn.Linear(32*32,1) ,torch.nn.Sigmoid())
             self.sem_gcn1 = SemGCN(cfg.skeleton, coords_dim = (2,1), nodes_group = cfg.skeleton if cfg.non_local else None )
             
             self.sem_gcn2 = SemGCN(cfg.skeleton, coords_dim = (32*32,64), nodes_group = cfg.skeleton if cfg.non_local else None )
+            #self.sem_gcn2.gconv_input[0].gconv.W.register_hook(print)
  
     def sem_gcn_init(self):
         # load pretrained sem_gcn1
-        ckpt_path = os.path.join(cfg.model_dir,'sem_gcn_epoch{}'.format(6))
+        ckpt_path = os.path.join(cfg.model_dir,'sem_gcn_epoch{}.pth.tar'.format(12))
         ckpt = torch.load(ckpt_path)
         self.sem_gcn1.load_state_dict(ckpt['network'])
 
@@ -63,16 +71,17 @@ class PoseNet(nn.Module):
         coord_y = self.soft_argmax_1d(heatmap_y)
         
         if (cfg.stage == 'sem_gcn'):
-            #print("img_feat shape is ", img_feat.shape)
             # [N,2048,8,8]
             joint_feat = self.feat_conv(img_feat)
-            #print("after conv become", joint_feat.shape)
             joint_feat = joint_feat.flatten(start_dim = 2)
             joint_feat = torch.cat((coord_x, coord_y,joint_feat), dim = 2) 
             #coord_z = self.sem_gcn(joint_feat)
-            
+            heatmap_z = self.sem_gcn(joint_feat)         
+
+            #joint_feat = self.deconv_z(img_feat)
+            #joint_feat = joint_feat.flatten(start_dim = 2)
             #heatmap form
-            heatmap_z = self.sem_gcn(joint_feat)
+            #heatmap_z = self.sem_gcn2(joint_feat)
             coord_z = self.soft_argmax_1d(heatmap_z)
         elif (cfg.stage == 'lixel'):
             # z axis
@@ -83,20 +92,21 @@ class PoseNet(nn.Module):
             coord_z = self.soft_argmax_1d(heatmap_z)
         # multi-branch
         else:
-            with torch.no_grad():
-                xy_coord = torch.cat((coord_x, coord_y), 2)
-                coord_z1 = self.sem_gcn1(xy_coord)            
-#            joint_feat = self.deconv_z(img_feat)
-#            joint_feat = joint_feat.flatten(start_dim = 2)
+            #with torch.no_grad():
+            xy_coord = torch.cat((coord_x, coord_y), 2)
+            coord_z1 = self.sem_gcn1(xy_coord)            
+            joint_feat = self.deconv_z(img_feat)
+            joint_feat = joint_feat.flatten(start_dim = 2)
 #            #heatmap form
-#            heatmap_z = self.sem_gcn2(joint_feat)
-#            coord_z2 = self.soft_argmax_1d(heatmap_z)
+            heatmap_z = self.sem_gcn2(joint_feat)
+            coord_z2 = self.soft_argmax_1d(heatmap_z)
 #            # C is of size N, 17
-#            C = self.assess(joint_feat)
-#            # make it betweem [0,1]
-#            C = 1.0 / ( 1 - torch.exp(-C) )
-#            coord_z = ( 1 - C ) * coord_z1 + C * coord_z2 
-            coord_z = coord_z1
+            #assess_feat = self.conv_assess(img_feat)
+            #assess_feat = assess_feat.flatten(start_dim = 2)
+            C = self.assess(joint_feat)
+            coord_z = ( 1 - C ) * coord_z1 + C * coord_z2 
+            #coord_z = coord_z2# (coord_z1 + coord_z2)/2
+            
 
         joint_coord = torch.cat((coord_x, coord_y, coord_z),2)
         return joint_coord

@@ -11,6 +11,8 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--test_epoch', default = '12', type=str, dest='test_epoch')
     parser.add_argument('--gpu', type=str,default='0', dest='gpu_ids')
+    parser.add_argument('--ckpt_name', type=str,default=None, dest='ckpt_name',
+required = True)
     parser.add_argument('--stage', type=str,default ='lixel', dest='stage')
     args = parser.parse_args()
 
@@ -32,14 +34,13 @@ def parse_args():
 def main():
 
     args = parse_args()
-    cfg.set_args(args.gpu_ids, args.stage )
+    cfg.set_args(args.gpu_ids, args.stage, ckpt_name = args.ckpt_name )
     cudnn.benchmark = True
     print('Stage: ' + args.stage)
 
     tester = Tester(args.test_epoch)
     tester._make_batch_generator()
     tester._make_model()
-    
     #state = {'epoch':10, 'network':tester.model.state_dict()}
     #file_path = os.path.join(cfg.model_dir, 'snapshot_demo.pth.tar')
     #torch.save(state, file_path)    
@@ -70,7 +71,11 @@ def main():
             else: eval_result[k] = v
         cur_sample_idx += len(out)
     
+    print('Stage :', cfg.stage)
+    print('Parameters number:', sum(p.numel() for p in
+tester.model.module.parameters() if p.requires_grad))
     tester._print_eval_result(eval_result)
+    
 
 if __name__ == "__main__":
     main()

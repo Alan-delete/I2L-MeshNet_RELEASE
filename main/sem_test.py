@@ -40,8 +40,10 @@ def main():
 
     tester = Tester(args.test_epoch)
     tester._make_batch_generator()
+    #cfg.skeleton = cfg.mirror_skeleton
     sem_gcn = SemGCN(cfg.skeleton, coords_dim = (2,1))
-    epoch = 12
+    epoch = 8
+    model_path = os.path.join(cfg.model_dir, 'mirror_sem_gcn_epoch{}.pth.tar'.format(epoch))
     model_path = os.path.join(cfg.model_dir, 'sem_gcn_epoch{}.pth.tar'.format(epoch))
     ckpt = torch.load(model_path)
     sem_gcn.load_state_dict(ckpt['network'], strict = False)
@@ -79,6 +81,9 @@ def main():
             else: eval_result[k] = v
         cur_sample_idx += len(out)
     
+    print('Parameters number:', sum(p.numel() for p in
+sem_gcn.parameters() if p.requires_grad))    
+
     tester._print_eval_result(eval_result)
 
 if __name__ == "__main__":

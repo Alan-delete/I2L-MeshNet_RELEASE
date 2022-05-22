@@ -31,7 +31,7 @@ default = False, dest='continue_train', action='store_true')
    
     return args
 def save_ckpt(state):
-    file_path = os.path.join(cfg.model_dir, 'sem_gcn_epoch{}.pth.tar'.format(state['epoch']))
+    file_path = os.path.join(cfg.model_dir, 'mirror_sem_gcn_epoch{}.pth.tar'.format(state['epoch']))
     torch.save(state, file_path)
 def main():
     
@@ -41,16 +41,17 @@ def main():
     #cudnn.benchmark = True
     print('Stage: ' + args.stage)
     
-    start_epoch = 9
+    start_epoch = 7
     trainer = Trainer()
     trainer._make_batch_generator()
+    cfg.skeleton = cfg.mirror_skeleton
     sem_gcn = SemGCN( cfg.skeleton, coords_dim = (2,1))
     sem_gcn.cuda()
     #trainer._make_model()
     loss_fn = torch.nn.MSELoss( reduction = 'mean')
     trainer.optimizer = torch.optim.Adam(sem_gcn.parameters(), lr = 0.0002)
     if (args.continue_train):
-        ckpt_path = os.path.join( cfg.model_dir, 'sem_gcn_epoch{}.pth.tar'.format(start_epoch))
+        ckpt_path = os.path.join( cfg.model_dir, 'mirror_sem_gcn_epoch{}.pth.tar'.format(start_epoch))
         ckpt = torch.load(ckpt_path)
         sem_gcn.load_state_dict(ckpt['network'], strict= False)
         trainer.optimizer.load_state_dict(ckpt['optimizer'])       

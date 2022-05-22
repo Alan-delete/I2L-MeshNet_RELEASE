@@ -11,6 +11,8 @@ def parse_args():
     parser.add_argument('--continue',
 default = False, dest='continue_train', action='store_true')
     parser.add_argument('--non_local',default =False, dest='non_local', action = 'store_true')
+    parser.add_argument('--ckpt_name',default = None, dest='ckpt_name', type =str ,
+required = True)
     args = parser.parse_args()
 
     if not args.gpu_ids:
@@ -31,7 +33,8 @@ def main():
     
     # argument parse and create log
     args = parse_args()
-    cfg.set_args(args.gpu_ids, args.stage, args.continue_train, args.non_local)
+    cfg.set_args(args.gpu_ids, args.stage, args.continue_train, args.non_local,
+args.ckpt_name)
     #cudnn.benchmark = True
     print('Stage: ' + args.stage)
 
@@ -71,7 +74,12 @@ def main():
             trainer.tot_timer.toc()
             trainer.tot_timer.tic()
             trainer.read_timer.tic()
-        
+#            for name, param in trainer.model.module.named_parameters():
+#                if (torch.isnan(param).any()):
+#                    print(name)
+#                    #print(param)
+#                    with torch.no_grad():
+#                        param[torch.isnan(param)] = 0.0
         trainer.save_model({
             'epoch': epoch,
             'network': trainer.model.state_dict(),
