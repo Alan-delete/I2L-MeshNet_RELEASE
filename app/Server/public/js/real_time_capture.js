@@ -7,8 +7,8 @@ let url = `${ngrok_url}realTimeUpload`
 import { update_skeleton} from './draw.js'
 
 let start_camera = document.querySelector("#start-camera")
-//let video = document.querySelector("#camera-feed")
-let video = document.querySelector("#video-player")
+let video = document.querySelector("#camera-feed")
+let videoAlt = document.querySelector("#video-player")
 let start_capture = document.querySelector('#start-capture')
 let captured_image = document.querySelector('#captured-image')
 
@@ -531,3 +531,10 @@ const constantPlayback = (i) => {
   }
 }
 
+const switchSource = () => {
+  let temp = videoAlt
+  videoAlt = video
+  video = temp
+}
+
+document.getElementById('switch').addEventListener('click',switchSource)

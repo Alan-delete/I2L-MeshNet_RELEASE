@@ -62,7 +62,7 @@ form.addEventListener("submit",function(event){
             data => {
             console.log(data);
             //update_skeleton(data['smpl_joint_coords'], I2L_skeleton);
-            //update_skeleton(data['human36_joint_coords'], human36_skeleton);
+            update_skeleton(data['human36_joint_coords'], human36_skeleton);
             //update_skeleton(data['Sem_joints'], Sem_skeleton); 
 		  
 	    	  if (data['action_name']== 'Loss exceeds threshold!')

@@ -69,7 +69,7 @@ cudnn.benchmark = True
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--gpu', type=str,default='0', dest='gpu_ids')
-    parser.add_argument('--stage', type=str,default ='lixel', dest='stage')
+    parser.add_argument('--stage', type=str,default ='hybrid', dest='stage')
     parser.add_argument('--continue',default = False, dest='continue_train', action='store_true')
     parser.add_argument('--non_local',default = False, dest='non_local', action='store_true')
     args = parser.parse_args()
