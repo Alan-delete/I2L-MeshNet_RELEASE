@@ -67,8 +67,8 @@ class Config:
     ## directory
     cur_dir = osp.dirname(os.path.abspath(__file__))
     root_dir = osp.join(cur_dir, '..')
-    #data_dir = osp.join(root_dir, 'data')
-    data_dir = osp.join(root_dir, '../I2L-MeshNet_RELEASE/data')
+    data_dir = osp.join(root_dir, 'data')
+    #data_dir = osp.join(root_dir, '../I2L-MeshNet_RELEASE/data')
     output_dir = osp.join(root_dir, 'output')
     #model_dir = osp.join(output_dir, 'model_dump')
     model_dir = osp.join(root_dir, 'weights')
