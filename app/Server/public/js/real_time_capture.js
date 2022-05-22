@@ -66,9 +66,10 @@ function continue_show_scene() {
 	              let coe = (time_diff - cur_time_diff)/(one_click_joint_record[i].timestamp - one_click_joint_record[i-1].timestamp);
                 console.log(coe)
 		            // linear interpolation
-	              let new_skeleton = one_click_joint_record[i]['smpl_joint_coords'].map( (inner, row_idx)=>inner.map( (ele, col_idx)=> (1-coe) * ele + (coe) * one_click_joint_record[i-1]['smpl_joint_coords'][row_idx][col_idx] ) )
+	              let new_skeleton = one_click_joint_record[i]['human36_joint_coords'].map( (inner, row_idx)=>
+				inner.map( (ele, col_idx)=> (1-coe) * ele + (coe) * one_click_joint_record[i-1]['human36_joint_coords'][row_idx][col_idx] ) )
 	              // update new_skeleton 
-                update_skeleton(new_skeleton, I2L_skeleton);
+                update_skeleton(new_skeleton, human36_skeleton);
                 frame_index++;
 	              break;
 	            }
@@ -115,9 +116,10 @@ function replay(record_data) {
 	            let coe = (time_diff - cur_time_diff)/(record_data[i].timestamp - record_data[i-1].timestamp);
             */
         // linear interpolation
-	        let new_skeleton = record_data[start_idx]['smpl_joint_coords'].map( (inner, row_idx)=>inner.map( (ele, col_idx)=> (1-coe) * ele + (coe) * record_data[start_idx+1]['smpl_joint_coords'][row_idx][col_idx] ) )
+	        let new_skeleton = record_data[start_idx]['human36_joint_coords'].map( (inner, row_idx)=>
+				inner.map( (ele, col_idx)=> (1-coe) * ele + (coe) * record_data[start_idx+1]['human36_joint_coords'][row_idx][col_idx] ) )
 	            // update new_skeleton 
-		    update_skeleton(new_skeleton, I2L_skeleton)
+		    update_skeleton(new_skeleton, human36_skeleton)
 	            
 	        }
                  
@@ -252,17 +254,10 @@ function test_only() {
       //update_skeleton(res['smpl_joint_coords'], I2L_skeleton);
       for (let i = 0; i < res.length; i++) {
           // need to improve for a batch of image upload
-          one_click_joint_record.push({
-            'smpl_joint_coords': res[i]['smpl_joint_coords'],
-            'timestamp': res[i]['timestamp']
-          })
+          one_click_joint_record.push(res[i])
 
         if (res[i]['action_name'] != 'Loss exceeds threshold!') {
-          action_record.push({
-            'action_name': res[i]['action_name'],
-            'loss': res[i]['loss']
-
-          })
+          action_record.push(res[i])
           accuracyRecord.push(res[i].action_accuracy)
         }
       }

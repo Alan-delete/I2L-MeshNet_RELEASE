@@ -110,7 +110,8 @@ class Action_reader():
 
     def get_json(self):
         return self.standard_action
-    
+
+
     def get_loss(self, user_action, gt_action):
         loss = 0
         for key in user_action.keys():
@@ -226,6 +227,18 @@ class Scoring():
     def get_scoring_data(self):
         return self._scoring_data
     
+    # of same shape (17,3) or (29,3), return rgb color array in the range [0.0,1.0]
+    def color_joint_loss(self,user_action, gt_action ):
+        colors = []
+        losses = []
+        for i in range (len(user_action)):
+            loss = np.absolute(np.array(user_action[i]) - np.array(gt_action[i])).mean()
+            losses.append(loss)
+        min_loss = min(losses)
+        value_range = max(losses) - min(losses)
+        colors = [ [(loss-min_loss)/value_range,0.1,1.0-(loss-min_loss)/value_range] for loss in losses]
+        return colors
+
     def time_to_frame(self, action_index, timestamp):
         return math.floor(int(self._scoring_data[action_index]['fps']) * timestamp/1000)
                 
@@ -275,9 +288,9 @@ class Scoring():
 
 def init_I2L(test_epoch = 12,mode = 'test'):
     # snapshot load
-    if args.stage == 'sem_gcn':
+    if args.stage == 'sem_gcn' or args.stage=='hybrid':
         joint_num = 17
-        model_path = os.path.join(cfg.model_dir,'second_hybrid_8.pth.tar')
+        model_path = os.path.join(cfg.model_dir,'2_experiment_9.pth.tar')
     else:
         joint_num = 29
         model_path = os.path.join(cfg.model_dir,'snapshot_demo.pth.tar')  
@@ -416,7 +429,8 @@ def file_upload():
                 action_idx, frame_idx, loss = ar.get_frame_idx(data_per_frame, request.values['action_choice'] )
                 if action_idx == -1:
                     data_per_frame['action_name'] = 'Loss exceeds threshold!'
-                    data_per_frame['loss'] = loss             
+                    data_per_frame['loss'] = loss        
+                    data_per_frame['human36_joint_color'] = [[0,0,0] for i in data_per_frame['human36_joint_coords']]     
                 else:
                     #TODO: obtain the predicted and recorded action's joint data
                     match_action, match_frame = vr.get_frame(action_idx, frame_idx)
@@ -427,6 +441,7 @@ def file_upload():
                     recorded_action = np.array(ar[action_idx]['data'][recorded_frame]['human36_joint_coords'])
                     data_per_frame['action_accuracy'] = sc.score(np.array(data_per_frame['human36_joint_coords']),action_idx,recorded_action,predicted_action)
                     data_per_frame['timestamp'] = timestamp[index]
+                    data_per_frame['human36_joint_color'] = sc.color_joint_loss(predicted_action,data_per_frame['human36_joint_coords'] )
                     #cv2.imwrite(os.path.join(app.static_folder, 'match_frame.png') , match_frame)
             
     #return json of coordinates
