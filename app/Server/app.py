@@ -88,7 +88,7 @@ def parse_args():
    
     return args
 args = parse_args()
-# cfg.set_args(args.gpu, args.stage, args.continue_train, args.non_local)
+cfg.set_args(args.gpu_ids, args.stage, args.continue_train, args.non_local)
 
 class Action_reader():
     def __init__(self, json_name = 'standard_joints.json'):
@@ -290,7 +290,7 @@ def init_I2L(test_epoch = 12,mode = 'test'):
     # snapshot load
     if args.stage == 'sem_gcn' or args.stage=='hybrid':
         joint_num = 17
-        model_path = os.path.join(cfg.model_dir,'2_experiment_9.pth.tar')
+        model_path = os.path.join(cfg.model_dir,'2_experiment.pth.tar')
     else:
         joint_num = 29
         model_path = os.path.join(cfg.model_dir,'snapshot_demo.pth.tar')  
@@ -299,7 +299,7 @@ def init_I2L(test_epoch = 12,mode = 'test'):
     I2L_model = get_model( joint_num, mode)
     I2L_model = DataParallel(I2L_model).cuda()
     ckpt = torch.load(model_path)
-    I2L_model.load_state_dict(ckpt['network'], strict=False)
+    I2L_model.load_state_dict(ckpt['network'])
     I2L_model.eval()
     return I2L_model
 
@@ -386,7 +386,7 @@ def get_output(img_data):
         
         # of shape (29,3) (17,3)
         I2L_joints = out['joint_coord_img']
-        if args.stage == 'sem_gcn':
+        if args.stage == 'sem_gcn' or args.stage == 'hybrid':
             return [{ 'human36_joint_coords':joints.tolist()} for joints in I2L_joints]
         else:
             #human36_joints = I2L_joints
@@ -481,8 +481,9 @@ def action_upload():
                     print("timestamp not found")
                     recorded_action = predicted_action
                 else:
-                    recorded_frame = sc.time_to_frame(action_idx,request.values['timestamp'])
-                    recorded_action = np.array(ar[action_idx]['data'][recorded_frame]['human36_joint_coords'])
+                    recorded_action = predicted_action
+                    #recorded_frame = sc.time_to_frame(action_idx,request.values['timestamp'])
+                    #recorded_action = np.array(ar[action_idx]['data'][recorded_frame]['human36_joint_coords'])
                 data['action_accuracy'] = sc.score(np.array(data['human36_joint_coords']),action_idx,recorded_action,predicted_action)
                 cv2.imwrite(os.path.join(app.static_folder, 'match_frame.png') , match_frame)
        
