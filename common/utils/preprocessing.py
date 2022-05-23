@@ -23,8 +23,7 @@ def get_action_json(path, model):
         success, original_img  = vr.read()
         if success:
             # use frame
-            data_per_frame = {'human36_joint_coords': None,'smpl_joint_coords': None,\
-'human36_joint_vector':None ,'smpl_joint_vector':None}
+            data_per_frame = {}
 
             original_img_height, original_img_width = original_img.shape[:2]
 
@@ -47,18 +46,27 @@ cfg.input_img_shape)
             meta_info = {'bb2img_trans':None}
             with torch.no_grad():
                 out = model(inputs,targets, meta_info, 'test' )
-                smpl_joints = out['joint_coord_img'].cpu().numpy()[0]
-                human36_joints = transform_joint_to_other_db(smpl_joints,cfg.smpl_joints_name ,
+                if (cfg.stage =='lixel'):
+                    smpl_joints = out['joint_coord_img'].cpu().numpy()[0]
+                    human36_joints = transform_joint_to_other_db(smpl_joints,cfg.smpl_joints_name ,
 cfg.joints_name)
-                data_per_frame['human36_joint_coords'] = human36_joints.tolist()
-                data_per_frame['smpl_joint_coords'] = smpl_joints.tolist()
-                human36_joint_vector = [ (human36_joints[ edge[1]] - human36_joints[edge[0]]).tolist() for
+                    data_per_frame['human36_joint_coords'] = human36_joints.tolist()
+                    data_per_frame['smpl_joint_coords'] = smpl_joints.tolist()
+                    human36_joint_vector = [ (human36_joints[ edge[1]] - human36_joints[edge[0]]).tolist() for
 edge in cfg.skeleton]
-                smpl_joint_vector = [ (smpl_joints[edge[1]] - smpl_joints[edge[0]]).tolist() for edge in
+                    smpl_joint_vector = [ (smpl_joints[edge[1]] - smpl_joints[edge[0]]).tolist() for edge in
 cfg.smpl_skeleton]
-                data_per_frame['human36_joint_vector'] = human36_joint_vector
-                data_per_frame['smpl_joint_vector'] = smpl_joint_vector
-                result['data'].append(data_per_frame)
+                    data_per_frame['human36_joint_vector'] = human36_joint_vector
+                    data_per_frame['smpl_joint_vector'] = smpl_joint_vector
+                    result['data'].append(data_per_frame)
+                # only human36_joints availible
+                else:
+                    human36_joints = out['joint_coord_img'].cpu().numpy()[0]
+                    data_per_frame['human36_joint_coords'] = human36_joints.tolist()
+                    human36_joint_vector = [ (human36_joints[ edge[1]] - human36_joints[edge[0]]).tolist() for
+edge in cfg.skeleton]
+                    data_per_frame['human36_joint_vector'] = human36_joint_vector
+                    result['data'].append(data_per_frame) 
         else:
             break
     #print(standard_fitness_action)
